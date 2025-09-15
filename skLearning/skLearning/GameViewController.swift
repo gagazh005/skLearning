@@ -14,20 +14,31 @@ class GameViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        // 在 GameViewController.swift 的 viewDidLoad 中添加调试代码
+        let screen = UIScreen.main
+        let screenSize = screen.bounds.size
+        let scale = screen.scale
+        let resolution = CGSize(width: screenSize.width * scale, height: screenSize.height * scale)
+        let fixedSize = CGSize(width: 800, height: 600)
+
+        print("屏幕尺寸（点）：\(screenSize.width) x \(screenSize.height)")
+        print("屏幕缩放比例：\(scale)")
+        print("屏幕分辨率（像素）：\(resolution.width) x \(resolution.height)")
+        
         if let view = self.view as! SKView? {
-            // Load the SKScene from 'GameScene.sks'
-            if let scene = SKScene(fileNamed: "GameScene") {
-                // Set the scale mode to scale to fit the window
-                scene.scaleMode = .aspectFill
-                
-                // Present the scene
-                view.presentScene(scene)
-            }
+            // 改为直接创建场景实例：
+            let scene = GameScene(size: fixedSize)
+            scene.scaleMode = .aspectFill
             
+            // Set the scene coordinates (0, 0) to the center of the screen.
+            // scene.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+            
+            // Present the scene
+            view.presentScene(scene)
             view.ignoresSiblingOrder = true
-            
             view.showsFPS = true
             view.showsNodeCount = true
+            view.showsDrawCount = true
         }
     }
 
