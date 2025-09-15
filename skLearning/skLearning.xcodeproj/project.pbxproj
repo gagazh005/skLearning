@@ -14,6 +14,7 @@
 		19B04E3B2E76B01700BE2BFC /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 19B04E392E76B01700BE2BFC /* Main.storyboard */; };
 		19B04E3D2E76B01900BE2BFC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 19B04E3C2E76B01900BE2BFC /* Assets.xcassets */; };
 		19B04E402E76B01900BE2BFC /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 19B04E3E2E76B01900BE2BFC /* LaunchScreen.storyboard */; };
+		19D15FB32E7855F500DBDD88 /* GameSocketManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19D15FB22E7855F500DBDD88 /* GameSocketManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,6 +26,7 @@
 		19B04E3A2E76B01700BE2BFC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		19B04E3C2E76B01900BE2BFC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		19B04E3F2E76B01900BE2BFC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		19D15FB22E7855F500DBDD88 /* GameSocketManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GameSocketManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,6 +61,7 @@
 			children = (
 				19B04E2F2E76B01700BE2BFC /* AppDelegate.swift */,
 				19B04E352E76B01700BE2BFC /* GameScene.swift */,
+				19D15FB22E7855F500DBDD88 /* GameSocketManager.swift */,
 				19B04E372E76B01700BE2BFC /* GameViewController.swift */,
 				19323B3E2E784952008BEB76 /* JoyStick.swift */,
 				19B04E392E76B01700BE2BFC /* Main.storyboard */,
@@ -141,6 +144,7 @@
 			files = (
 				19B04E362E76B01700BE2BFC /* GameScene.swift in Sources */,
 				19323B3F2E784952008BEB76 /* JoyStick.swift in Sources */,
+				19D15FB32E7855F500DBDD88 /* GameSocketManager.swift in Sources */,
 				19B04E382E76B01700BE2BFC /* GameViewController.swift in Sources */,
 				19B04E302E76B01700BE2BFC /* AppDelegate.swift in Sources */,
 			);
