@@ -28,12 +28,14 @@ class JoyStick: SKNode {
         base.fillColor = UIColor(white: 0.2, alpha: 0.5)
         base.strokeColor = UIColor(white: 0.8, alpha: 0.8)
         base.lineWidth = 2
+        base.zPosition = 10
         
         // 创建控制杆
         stick = SKShapeNode(circleOfRadius: stickRadius)
         stick.fillColor = UIColor(white: 0.9, alpha: 0.9)
         stick.strokeColor = UIColor.white
         stick.lineWidth = 1
+        base.zPosition = 10
         
         super.init()
         
@@ -124,8 +126,7 @@ class JoyStick: SKNode {
     
     /// 获取方向向量（归一化）
     func getDirectionVector() -> CGVector {
-        return CGVector(dx: cos(currentAngle) * intensity,
-                       dy: sin(currentAngle) * intensity)
+        return CGVector(dx: cos(currentAngle), dy: sin(currentAngle))
     }
     
     /// 获取角度（度数）

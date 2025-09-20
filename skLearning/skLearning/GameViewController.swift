@@ -19,7 +19,7 @@ class GameViewController: UIViewController {
         let screenSize = screen.bounds.size
         let scale = screen.scale
         let resolution = CGSize(width: screenSize.width * scale, height: screenSize.height * scale)
-        let fixedSize = CGSize(width: 800, height: 600)
+        //let fixedSize = CGSize(width: 800, height: 600)
 
         print("屏幕尺寸（点）：\(screenSize.width) x \(screenSize.height)")
         print("屏幕缩放比例：\(scale)")
@@ -27,8 +27,8 @@ class GameViewController: UIViewController {
         
         if let view = self.view as! SKView? {
             // 改为直接创建场景实例：
-            let scene = GameScene(size: fixedSize)
-            scene.scaleMode = .aspectFill
+            let scene = GameScene(size: screenSize)
+            scene.scaleMode = .resizeFill
             
             // Set the scene coordinates (0, 0) to the center of the screen.
             // scene.anchorPoint = CGPoint(x: 0.5, y: 0.5)

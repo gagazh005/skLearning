@@ -5,7 +5,7 @@ class GameScene: SKScene {
     private var currentCircle: SKShapeNode?  // 当前绘制的圆圈
     // private let snakeHeadNode = SKSpriteNode(imageNamed: "snakeHead")
     private var joyStick: JoyStick!
-    private var startPoint: CGPoint?      // 起点位置
+    private var startPoint: CGPoint? = CGPoint(x: 0,y: 0)      // 起点位置
     
     // MARK: - 网络管理
     private var socketManager: GameSocketManager!
@@ -24,10 +24,29 @@ class GameScene: SKScene {
     // MARK: - 游戏属性
     var allFoodNode = SKNode()
     var players: [String: Player] = [:]
-    var myPlayerId: Int?
+    var myPlayerId: String?
     var lastMovementTime: TimeInterval = 0
     let movementInterval: TimeInterval = 0.1
     var currentMovement = CGVector(dx: 0,dy: 0)
+    var foodTypes: [String: [String: Any]]?
+    let foodColors = [
+        "桃子": (255, 192, 203),    // 粉色
+        "香蕉": (255, 255, 0),      // 黄色
+        "樱桃": (255, 0, 0),        // 红色
+        "葡萄": (128, 0, 128),      // 紫色
+        "番茄": (255, 99, 71),      // 番茄红
+        "辣椒": (255, 69, 0),       // 橙红色
+        "猕猴桃": (154, 205, 50),   // 黄绿色
+        "胡萝卜": (255, 140, 0),    // 深橙色
+        "茄子": (75, 0, 130),       // 靛蓝色
+        "蘑菇": (210, 180, 140),    // 棕褐色
+        "草莓": (255, 20, 147),     // 深粉色
+        "菠萝": (255, 223, 0),      // 金黄色
+        "柠檬": (255, 255, 0),      // 亮黄色
+        "白萝卜": (245, 245, 245),  // 白色
+        "西瓜": (60, 179, 113),     // 绿色
+        "拼盘": (255, 215, 0)       // 金色
+    ]
     
     // MARK: - UI元素
     var statusLabel: SKLabelNode!
@@ -79,9 +98,9 @@ class GameScene: SKScene {
     func calculateDisplayBounds() {
         // 获取屏幕可用空间（考虑安全区域）
         let safeAreaInsets = view?.safeAreaInsets ?? UIEdgeInsets.zero
+        print("safeAreaInsets=\(safeAreaInsets)")
         let availableWidth = size.width - safeAreaInsets.left - safeAreaInsets.right
         let availableHeight = size.height - safeAreaInsets.top - safeAreaInsets.bottom
-        
         // 计算保持纵横比的缩放因子
         let widthScale = availableWidth / serverBounds.width
         let heightScale = availableHeight / serverBounds.height
@@ -103,15 +122,19 @@ class GameScene: SKScene {
     }
     
     func setupGameBorder() {
-        // 创建边界框
-        let border = SKShapeNode(rect: displayBounds)
-        border.name = "gameBorder"
-        border.strokeColor = SKColor(red: 0.8, green: 0.8, blue: 0.8, alpha: 1.0)
-        border.lineWidth = 2
-        border.fillColor = .clear
-        border.zPosition = -1 // 在背景层
         
-        addChild(border)
+        // 如果已经有边界框就重用它，否则创建边界框
+        if let border = childNode(withName: "gameBorder") as? SKShapeNode {
+            border.path = UIBezierPath(rect: displayBounds).cgPath
+        } else {
+            let border = SKShapeNode(rect: displayBounds)
+            border.name = "gameBorder"
+            border.strokeColor = SKColor(red: 0.8, green: 0.8, blue: 0.8, alpha: 1.0)
+            border.lineWidth = 2
+            border.fillColor = .clear
+            border.zPosition = -1 // 在背景层
+            addChild(border)
+        }
     }
     
     func setupBackground() {
@@ -123,14 +146,16 @@ class GameScene: SKScene {
         statusLabel = SKLabelNode(text: "未连接")
         statusLabel.position = CGPoint(x: frame.midX, y: frame.height - 40)
         statusLabel.fontColor = .red
+        statusLabel.fontName = "PingFangSC-Semibold"
         statusLabel.fontSize = 16
         addChild(statusLabel)
         
         // 玩家ID标签 - 添加在左上角
         playerIdLabel = SKLabelNode(text: "|ID: 未连接")
         playerIdLabel.position = CGPoint(x: 100, y: frame.height - 40) // 左上角位置
-        playerIdLabel.fontColor = .blue
-        playerIdLabel.fontSize = 14
+        playerIdLabel.fontColor = .white
+        playerIdLabel.fontName = "PingFangSC-Semibold"
+        playerIdLabel.fontSize = 15
         playerIdLabel.horizontalAlignmentMode = .left // 左对齐
         playerIdLabel.zPosition = 100 // 确保在最上层
         playerIdLabel.name = "playerIdLabel"
@@ -139,8 +164,9 @@ class GameScene: SKScene {
         // 玩家数量标签
         playersCountLabel = SKLabelNode(text: "玩家: 0")
         playersCountLabel.position = CGPoint(x: 30, y: frame.height - 40)
-        playersCountLabel.fontColor = .darkGray
-        playersCountLabel.fontSize = 14
+        playersCountLabel.fontColor = .white
+        playersCountLabel.fontName = "PingFangSC-Semibold"
+        playersCountLabel.fontSize = 15
         addChild(playersCountLabel)
         
         // 连接按钮
@@ -197,14 +223,13 @@ class GameScene: SKScene {
         
         let movementData: [String: Any] = [
             "type": "direction",
-            "direction": (currentMovement.dx, currentMovement.dy)
+            "direction": [currentMovement.dx, currentMovement.dy]
         ]
         socketManager.sendData(movementData)
     }
     
     override func didChangeSize(_ oldSize: CGSize) {
         super.didChangeSize(oldSize)
-        
         // 屏幕尺寸变化时重新计算边界
         calculateDisplayBounds()
         setupGameBorder()
@@ -216,11 +241,11 @@ class GameScene: SKScene {
             print("还没有初始化UI元素，就开始调整位置！")
             return
         }
-        // 将UI元素移到边界外
-        statusLabel.position = CGPoint(x: size.width / 2, y: displayBounds.maxY - 40)
-        playersCountLabel.position = CGPoint(x: 30, y: displayBounds.maxY - 40)
-        playerIdLabel.position = CGPoint(x: 100, y: displayBounds.maxY - 40)
-        connectButton.position = CGPoint(x: size.width - 60, y: displayBounds.maxY - 20)
+        // 将UI元素移到边界内
+        statusLabel.position = CGPoint(x: size.width / 2, y: size.height - 40)
+        playersCountLabel.position = CGPoint(x: 30, y: size.height - 40)
+        playerIdLabel.position = CGPoint(x: 100, y: size.height - 40)
+        connectButton.position = CGPoint(x: size.width - 60, y: size.height - 20)
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -229,8 +254,8 @@ class GameScene: SKScene {
         let location = touch.location(in: self)
         let nodes = self.nodes(at: location)
         
-        //print("触摸位置: \(location)")
-        //print("触摸到的节点: \(nodes.map { $0.name ?? "无名节点" })")
+        // print("触摸位置: \(location)")
+        // print("触摸到的节点: \(nodes.map { $0.name ?? "无名节点" })")
         
         for node in nodes {
             if node.name == "connectButton" || node.parent?.name == "connectButton" {
@@ -331,9 +356,10 @@ class GameScene: SKScene {
     }
     
     func towards(to point: CGPoint) {
-        // guard let startPoint = startPoint else { return }
-        // let theta = atan2(point.y - startPoint.y, point.x - startPoint.x)
+        guard let startPoint = startPoint else { return }
+        let theta = atan2(point.y - startPoint.y, point.x - startPoint.x)
         // snakeHeadNode.zRotation = theta
+        currentMovement = CGVector(dx: cos(theta), dy: sin(theta))
     }
     
     func setupNetwork() {
@@ -370,44 +396,52 @@ class GameScene: SKScene {
             player.snakeNode.addChild(snakeBodyNode)
         }
         // 添加玩家ID标签
-        let idLabel = SKLabelNode(text: "\(id)")
-        idLabel.fontSize = 8
+        let headX = snakeArray.first?[0] ?? 0
+        let headY = snakeArray.first?[1] ?? 0
+        let screenPosition = serverToScreenPosition(CGPoint(x: headX, y: headY + 1))
+        let idLabel = SKLabelNode(text: "玩家\(id)")
+        idLabel.name = "玩家\(id)的标签"
+        idLabel.fontSize = 15
+        idLabel.fontName = "PingFangSC-Semibold"
         idLabel.fontColor = .white
-        idLabel.position = CGPoint(x: 0, y: -25)
-        idLabel.zPosition = 11
-        player.snakeNode.addChild(idLabel)
+        idLabel.position = screenPosition
+        idLabel.zPosition = 9
+        addChild(idLabel)
         addChild(player.snakeNode)
+        
         return player
     }
     
     func updatePlayerPosition(id: String, snakeArray: [[CGFloat]], color: SKColor) {
-        // 根据缩放调整玩家大小
+        guard let player = players[id] else { return }
         let playerSize = serverToScreenDistance(1) // 假设服务器端玩家大小为1
-        if let player = players[id] {
-            /*
-            if let head = player.snakeNode.children.first {
-                let x = snakeArray.first?[0] ?? 0
-                let y = snakeArray.first?[1] ?? 0
-                head.position = serverToScreenPosition(CGPoint(x: x, y: y))
+        if let idLabel = childNode(withName: "玩家\(id)的标签") as? SKLabelNode {
+            // 更新玩家ID标签
+            let headX = snakeArray.first?[0] ?? 0
+            let headY = snakeArray.first?[1] ?? 0
+            let screenPosition = serverToScreenPosition(CGPoint(x: headX, y: headY + 1))
+            idLabel.position = screenPosition
+        }
+        if player.snakeNode.children.count > snakeArray.count {
+            for index in snakeArray.count ..< player.snakeNode.children.count {
+                player.snakeNode.children[index].isHidden = true
             }
-            */
-            if player.snakeNode.children.count > snakeArray.count {
-                for index in snakeArray.count ..< player.snakeNode.children.count {
-                    player.snakeNode.children[index].removeFromParent()
+        }
+        for (index, body) in snakeArray.enumerated() {
+            let x = body[0]
+            let y = body[1]
+            let screenPosition = serverToScreenPosition(CGPoint(x: x, y: y))
+            if index < player.snakeNode.children.count {
+                if index == 0 && myPlayerId == id {
+                    startPoint = screenPosition
                 }
+                guard let snakeBodyNode = player.snakeNode.children[index] as? SKSpriteNode else { return }
+                snakeBodyNode.position = screenPosition
+                snakeBodyNode.isHidden = false
             } else {
-                for (index, body) in snakeArray.enumerated() {
-                    let x = body[0]
-                    let y = body[1]
-                    let screenPosition = serverToScreenPosition(CGPoint(x: x, y: y))
-                    if let snakeBodyNode = player.snakeNode.children[index] as? SKSpriteNode {
-                        snakeBodyNode.position = screenPosition
-                    } else {
-                        let snakeBodyNode = SKSpriteNode(color: color, size: CGSize(width: playerSize, height: playerSize))
-                        snakeBodyNode.position = screenPosition
-                        player.snakeNode.addChild(snakeBodyNode)
-                    }
-                }
+                let snakeBodyNode = SKSpriteNode(color: color, size: CGSize(width: playerSize, height: playerSize))
+                snakeBodyNode.position = screenPosition
+                player.snakeNode.addChild(snakeBodyNode)
             }
         }
     }
@@ -415,30 +449,46 @@ class GameScene: SKScene {
     func removePlayer(id: String) {
         players[id]?.snakeNode.removeFromParent()
         players.removeValue(forKey: id)
+        if let idLabel = childNode(withName: "玩家\(id)的标签") as? SKLabelNode {
+            idLabel.removeFromParent()
+        }
     }
     
-    func updateFood(foodArray: [[Any]]) {
-        allFoodNode.removeFromParent()
-        allFoodNode.removeAllChildren()
-        let foodSize = serverToScreenDistance(1) // 假设服务器端食物大小为1
-        for food in foodArray {
-            guard let _ = food[0] as? String else {
-                print("食物名称错误")
-                return
-            }
-            guard let foodPos = food[1] as? [CGFloat] else {
-                print("食物位置错误")
-                return
-            }
-            let x = foodPos[0]
-            let y = foodPos[1]
-            //food_img = self.food_img_list[self.food_types[food_name]["img_index"]]
-            let foodNode = SKSpriteNode(color: .white, size: CGSize(width: foodSize, height: foodSize))
-            let screenPosition = serverToScreenPosition(CGPoint(x: x, y: y))
-            foodNode.position = screenPosition
+    func createFood(_ foodCount: Int) {
+        for _ in 0 ..< foodCount {
+            let foodNode = SKSpriteNode(color: .clear, size: CGSize(width: 0, height: 0))
             allFoodNode.addChild(foodNode)
         }
-        addChild(allFoodNode)
+    }
+    
+    func updateFood(_ foodArray: [[Any]]) {
+        if foodArray.count > allFoodNode.children.count {
+            createFood(foodArray.count - allFoodNode.children.count)
+        }
+        if allFoodNode.children.count > foodArray.count {
+            for index in foodArray.count ..< allFoodNode.children.count {
+                allFoodNode.children[index].isHidden = true
+            }
+        }
+        let foodSize = serverToScreenDistance(1) // 假设服务器端食物大小为1
+        for (index, food) in foodArray.enumerated() {
+            guard let foodName = food[0] as? String else { return }
+            guard let foodPos = food[1] as? [CGFloat] else { return }
+            let x = foodPos[0]
+            let y = foodPos[1]
+            let (red, green, blue) = foodColors[foodName] ?? (0, 0, 0)
+            let color = SKColor(red: CGFloat(red)/255.0,
+                              green: CGFloat(green)/255.0,
+                              blue: CGFloat(blue)/255.0,
+                              alpha: 1.0)
+            //food_img = self.food_img_list[self.food_types[food_name]["img_index"]]
+            guard let foodNode = allFoodNode.children[index] as? SKSpriteNode else { return }
+            foodNode.color = color
+            foodNode.size = CGSize(width: foodSize, height: foodSize)
+            let screenPosition = serverToScreenPosition(CGPoint(x: x, y: y))
+            foodNode.position = screenPosition
+            foodNode.isHidden = false
+        }
     }
 }
 
@@ -447,7 +497,6 @@ class Player {
     let playerId: String
     // let name: String
     let snakeNode: SKNode
-    
     init(id: String) {
         self.playerId = id
         // self.name = name
@@ -503,13 +552,12 @@ extension GameScene: GameSocketManagerDelegate {
         case "join_game":
             guard let content = content as? [String: Any] else { return }
             if let gameConfig = content["game_config"] as? [String : Any] {
-                loadConfig(game_config: gameConfig )
+                loadConfig(gameConfig)
                 guard let playerId = content["player_id"] as? Int else { return }
-                myPlayerId = playerId
+                myPlayerId = String(playerId)
                 // self.game_paused = game_data.get("game_paused")
                 // if self.game_paused:
                 // pygame.mixer.music.pause()
-                print("我的玩家ID: \(playerId)")
                 playerIdLabel.text = "ID: \(playerId)"
             }
             // self.load_images()
@@ -538,6 +586,7 @@ extension GameScene: GameSocketManagerDelegate {
             // self.eat_sound.play()
             // effect = food_types[content]["effect"]
             // points = food_types[content]["points"]
+            message = "\(content)"
             // message = "\(effect),加\(points)分"
             /*
              if food_types[content].keys().contains("effect_time"):
@@ -546,13 +595,12 @@ extension GameScene: GameSocketManagerDelegate {
              self.screen_height - 40)
              self.effect_circles.append(new_effect_circle)
              */
-            message = "吃到食物"
         case "crash":
             // pygame.mixer.music.pause()
             // self.death_sound.play()
             message = "撞毁"
         default:
-            print("游戏事件类型错误！")
+            message = "游戏事件类型错误!"
             // new_text = RisingText(message, self.text_x, self.text_y)
             // self.rising_texts.append(new_text)
         }
@@ -560,39 +608,37 @@ extension GameScene: GameSocketManagerDelegate {
         statusLabel.fontColor = .white
     }
     
-    private func loadConfig(game_config: [String: Any]) {
+    private func loadConfig(_ gameConfig: [String: Any]) {
         // self.s_version = game_config["s_version"]
-        // self.food_types = game_config["food_types"]
-        guard let (w: width, h: height) = game_config["grid"] as? (Int, Int) else { return }
+        guard let grid = gameConfig["grid"] as? [Int] else { return }
+        let width = grid[0]
+        let height = grid[1]
         serverBounds = CGRect(x: 0, y: 0, width: width, height: height)
+        calculateDisplayBounds()
+        setupGameBorder()
+        adjustUIPosition()
         
         // self.invisible_factor = game_config["invisible_factor"]
-        /*
-        for food_detail in self.food_types.values():
-            if 'effect_time' in food_detail.keys():
-                self.effect_times[food_detail['effect']] = food_detail['effect_time']
-        */
+        
+        foodTypes = gameConfig["food_types"] as? [String: [String: Any]]
+        print("加载食物类型\(foodTypes)")
     }
     
     private func handleGameState(_ data: [String : Any]) {
-        guard let playersData = data["players"] as? [String: Any] else {
-            print("无效的game_state数据")
-            return
-        }
+        guard let playersData = data["players"] as? [String: Any] else { return }
         if let foodArray = data["food_list"] as? [[Any]] {
-            updateFood(foodArray: foodArray)
+            if allFoodNode.children.isEmpty {
+                addChild(allFoodNode)
+                createFood(foodArray.count)
+            } else {
+                updateFood(foodArray)
+            }
         }
         
         // 更新现有玩家位置
         for (id, playerData) in playersData {
-            guard let playerData = playerData as? [String: Any] else {
-                print("玩家\(id):无效的player数据")
-                return
-            }
-            guard let playerSnake = playerData["snake"] as? [[CGFloat]], let colorArray = playerData["color"] as? [Int], colorArray.count == 3 else {
-                print("错误的snake数据或者color数据")
-                return
-            }
+            guard let playerData = playerData as? [String: Any] else { return }
+            guard let playerSnake = playerData["snake"] as? [[CGFloat]], let colorArray = playerData["color"] as? [Int], colorArray.count == 3 else { return }
             let color = SKColor(red: CGFloat(colorArray[0])/255.0,
                               green: CGFloat(colorArray[1])/255.0,
                               blue: CGFloat(colorArray[2])/255.0,
