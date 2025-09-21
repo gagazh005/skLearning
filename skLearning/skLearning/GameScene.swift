@@ -1,4 +1,5 @@
 import SpriteKit
+import Foundation
 
 class GameScene: SKScene {
     private var currentLine: SKShapeNode?  // 当前绘制的直线
@@ -22,11 +23,14 @@ class GameScene: SKScene {
     var scaleFactor: CGFloat = 1.0
     
     // MARK: - 游戏属性
+    var gameState: [String : Any] = [:]
     var allFoodNode = SKNode()
     var players: [String: Player] = [:]
     var myPlayerId: String?
     var lastMovementTime: TimeInterval = 0
+    var lastUpdateTime: TimeInterval = 0
     let movementInterval: TimeInterval = 0.1
+    let updateInterval: TimeInterval = 0.1
     var currentMovement = CGVector(dx: 0,dy: 0)
     var foodTypes: [String: [String: Any]]?
     let foodColors = [
@@ -206,13 +210,19 @@ class GameScene: SKScene {
     
     // MARK: - 游戏循环
     override func update(_ currentTime: TimeInterval) {
-        playersCountLabel.text = "玩家: \(players.count)"
+        super.update(currentTime)
+        
         // 处理连续移动
         if currentMovement != CGVector(dx: 0, dy: 0) {
             if currentTime - lastMovementTime >= movementInterval {
                 sendMovementToServer()
                 lastMovementTime = currentTime
             }
+        }
+        // 处理游戏状态更新
+        if currentTime - lastUpdateTime >= updateInterval {
+            handleGameState(gameState)
+            lastUpdateTime = currentTime
         }
     }
     
@@ -383,7 +393,6 @@ class GameScene: SKScene {
     
     // MARK: - 玩家管理
     func createPlayer(id: String, snakeArray:[[CGFloat]], color: SKColor) -> Player {
-        print("创造玩家\(id)")
         let player = Player(id: id)
         // 根据缩放调整玩家大小
         let playerSize = serverToScreenDistance(1) // 假设服务器端玩家大小为1
@@ -412,15 +421,16 @@ class GameScene: SKScene {
         return player
     }
     
-    func updatePlayerPosition(id: String, snakeArray: [[CGFloat]], color: SKColor) {
+    func updatePlayerPosition(id: String, snakeArray: [[CGFloat]], color: SKColor, headRatio: CGFloat) {
         guard let player = players[id] else { return }
         let playerSize = serverToScreenDistance(1) // 假设服务器端玩家大小为1
         if let idLabel = childNode(withName: "玩家\(id)的标签") as? SKLabelNode {
             // 更新玩家ID标签
-            let headX = snakeArray.first?[0] ?? 0
-            let headY = snakeArray.first?[1] ?? 0
+            let headX = snakeArray.first?[0] ?? -10
+            let headY = snakeArray.first?[1] ?? -10
             let screenPosition = serverToScreenPosition(CGPoint(x: headX, y: headY + 1))
-            idLabel.position = screenPosition
+            let moveAction = SKAction.move(to: screenPosition, duration: updateInterval)
+            idLabel.run(moveAction)
         }
         if player.snakeNode.children.count > snakeArray.count {
             for index in snakeArray.count ..< player.snakeNode.children.count {
@@ -432,11 +442,17 @@ class GameScene: SKScene {
             let y = body[1]
             let screenPosition = serverToScreenPosition(CGPoint(x: x, y: y))
             if index < player.snakeNode.children.count {
+                // 把自身蛇头作为触摸位置指向的起始点
                 if index == 0 && myPlayerId == id {
                     startPoint = screenPosition
                 }
+                // 重用蛇身节点
                 guard let snakeBodyNode = player.snakeNode.children[index] as? SKSpriteNode else { return }
-                snakeBodyNode.position = screenPosition
+                let ratio = snakeArray.count > 1 ? pow(Double(headRatio), 1 - Double(index) / Double(snakeArray.count - 1)) : headRatio
+                let scaleAction = SKAction.scale(to: CGSize(width: ratio * playerSize, height: ratio * playerSize), duration: 1)
+                let moveAction = SKAction.move(to: screenPosition, duration: updateInterval)
+                let groupAction = SKAction.group([moveAction, scaleAction])
+                snakeBodyNode.run(groupAction)
                 snakeBodyNode.isHidden = false
             } else {
                 let snakeBodyNode = SKSpriteNode(color: color, size: CGSize(width: playerSize, height: playerSize))
@@ -536,7 +552,7 @@ extension GameScene: GameSocketManagerDelegate {
         case "game_event":
             handleGameEvent(data)
         case "game_state":
-            handleGameState(data)
+            gameState = data
         default:
             print("未知消息类型: \(type)")
         }
@@ -638,16 +654,17 @@ extension GameScene: GameSocketManagerDelegate {
         // 更新现有玩家位置
         for (id, playerData) in playersData {
             guard let playerData = playerData as? [String: Any] else { return }
-            guard let playerSnake = playerData["snake"] as? [[CGFloat]], let colorArray = playerData["color"] as? [Int], colorArray.count == 3 else { return }
+            guard let playerSnake = playerData["snake"] as? [[CGFloat]], let colorArray = playerData["color"] as? [Int], colorArray.count == 3, let headRatio = playerData["head_ratio"] as? CGFloat else { return }
             let color = SKColor(red: CGFloat(colorArray[0])/255.0,
                               green: CGFloat(colorArray[1])/255.0,
                               blue: CGFloat(colorArray[2])/255.0,
                               alpha: 1.0)
             if players[id] != nil {
-                updatePlayerPosition(id: id, snakeArray: playerSnake, color: color)
+                updatePlayerPosition(id: id, snakeArray: playerSnake, color: color, headRatio:headRatio)
             } else {
                 let player = createPlayer(id: id, snakeArray:playerSnake, color: color)
                 players[id] = player
+                playersCountLabel.text = "玩家: \(players.count)"
             }
         }
         
