@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1919D64B2E802F5D001F5F95 /* ColoredSpriteNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1919D64A2E802F5D001F5F95 /* ColoredSpriteNode.swift */; };
+		1919D64D2E803F5E001F5F95 /* foodImage in Resources */ = {isa = PBXBuildFile; fileRef = 1919D64C2E803F5D001F5F95 /* foodImage */; };
 		19323B3F2E784952008BEB76 /* JoyStick.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19323B3E2E784952008BEB76 /* JoyStick.swift */; };
 		19B04E302E76B01700BE2BFC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B04E2F2E76B01700BE2BFC /* AppDelegate.swift */; };
 		19B04E362E76B01700BE2BFC /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B04E352E76B01700BE2BFC /* GameScene.swift */; };
@@ -18,6 +20,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1919D64A2E802F5D001F5F95 /* ColoredSpriteNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoredSpriteNode.swift; sourceTree = "<group>"; };
+		1919D64C2E803F5D001F5F95 /* foodImage */ = {isa = PBXFileReference; lastKnownFileType = folder; name = foodImage; path = skLearning/Assets.xcassets/foodImage; sourceTree = "<group>"; };
 		19323B3E2E784952008BEB76 /* JoyStick.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoyStick.swift; sourceTree = "<group>"; };
 		19B04E2C2E76B01700BE2BFC /* skLearning.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = skLearning.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		19B04E2F2E76B01700BE2BFC /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -43,6 +47,7 @@
 		19B04E232E76B01700BE2BFC = {
 			isa = PBXGroup;
 			children = (
+				1919D64C2E803F5D001F5F95 /* foodImage */,
 				19B04E2E2E76B01700BE2BFC /* skLearning */,
 				19B04E2D2E76B01700BE2BFC /* Products */,
 			);
@@ -64,6 +69,7 @@
 				19D15FB22E7855F500DBDD88 /* GameSocketManager.swift */,
 				19B04E372E76B01700BE2BFC /* GameViewController.swift */,
 				19323B3E2E784952008BEB76 /* JoyStick.swift */,
+				1919D64A2E802F5D001F5F95 /* ColoredSpriteNode.swift */,
 				19B04E392E76B01700BE2BFC /* Main.storyboard */,
 				19B04E3C2E76B01900BE2BFC /* Assets.xcassets */,
 				19B04E3E2E76B01900BE2BFC /* LaunchScreen.storyboard */,
@@ -129,6 +135,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1919D64D2E803F5E001F5F95 /* foodImage in Resources */,
 				19B04E3B2E76B01700BE2BFC /* Main.storyboard in Resources */,
 				19B04E3D2E76B01900BE2BFC /* Assets.xcassets in Resources */,
 				19B04E402E76B01900BE2BFC /* LaunchScreen.storyboard in Resources */,
@@ -147,6 +154,7 @@
 				19D15FB32E7855F500DBDD88 /* GameSocketManager.swift in Sources */,
 				19B04E382E76B01700BE2BFC /* GameViewController.swift in Sources */,
 				19B04E302E76B01700BE2BFC /* AppDelegate.swift in Sources */,
+				1919D64B2E802F5D001F5F95 /* ColoredSpriteNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

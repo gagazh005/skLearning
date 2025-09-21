@@ -35,7 +35,7 @@ class JoyStick: SKNode {
         stick.fillColor = UIColor(white: 0.9, alpha: 0.9)
         stick.strokeColor = UIColor.white
         stick.lineWidth = 1
-        base.zPosition = 10
+        base.zPosition = 150
         
         super.init()
         

@@ -4,7 +4,6 @@ import Foundation
 class GameScene: SKScene {
     private var currentLine: SKShapeNode?  // 当前绘制的直线
     private var currentCircle: SKShapeNode?  // 当前绘制的圆圈
-    // private let snakeHeadNode = SKSpriteNode(imageNamed: "snakeHead")
     private var joyStick: JoyStick!
     private var startPoint: CGPoint? = CGPoint(x: 0,y: 0)      // 起点位置
     
@@ -33,6 +32,7 @@ class GameScene: SKScene {
     let updateInterval: TimeInterval = 0.1
     var currentMovement = CGVector(dx: 0,dy: 0)
     var foodTypes: [String: [String: Any]]?
+    var foodTextures: [SKTexture] = []
     let foodColors = [
         "桃子": (255, 192, 203),    // 粉色
         "香蕉": (255, 255, 0),      // 黄色
@@ -51,6 +51,8 @@ class GameScene: SKScene {
         "西瓜": (60, 179, 113),     // 绿色
         "拼盘": (255, 215, 0)       // 金色
     ]
+    var snakeHeadTexture: SKTexture = SKTexture(imageNamed: "snakeHead")
+    var snakeBodyTexture: SKTexture = SKTexture(imageNamed: "snakeBody")
     
     // MARK: - UI元素
     var statusLabel: SKLabelNode!
@@ -67,16 +69,11 @@ class GameScene: SKScene {
         setupNetwork()
         // 调整UI位置，避免被边界遮挡
         adjustUIPosition()
-        
-        // backgroundColor = .black
         setupJoyStick()
-        /*
-        snakeHeadNode.scale(to: CGSize(width: 50, height: 50))
-        snakeHeadNode.position = CGPoint(x: frame.midX, y: frame.midY)
-        snakeHeadNode.name = "蛇头"
-        startPoint = snakeHeadNode.position
-        addChild(snakeHeadNode)
-        */
+        for index in 0...66 {
+            let texture = SKTexture(imageNamed: "food_\(index).png")
+            foodTextures.append(texture)
+        }
     }
     
     func serverToScreenPosition(_ serverPoint: CGPoint) -> CGPoint {
@@ -199,13 +196,10 @@ class GameScene: SKScene {
     }
     
     private func handleDirectionChange(angle: CGFloat, intensity: CGFloat) {
-        // 根据方向盘输入调转蛇头
-        currentMovement = joyStick.getDirectionVector()
-        /*
         if intensity > 0.5 {
-            snakeHeadNode.zRotation = angle
+            // 根据方向盘输入调转蛇头
+            currentMovement = joyStick.getDirectionVector()
         }
-        */
     }
     
     // MARK: - 游戏循环
@@ -392,14 +386,22 @@ class GameScene: SKScene {
     }
     
     // MARK: - 玩家管理
-    func createPlayer(id: String, snakeArray:[[CGFloat]], color: SKColor) -> Player {
-        let player = Player(id: id)
-        // 根据缩放调整玩家大小
+    func createPlayer(id: String, playerData:[String: Any]) -> Player {
+        guard let snakeArray = playerData["snake"] as? [[CGFloat]], let colorArray = playerData["color"] as? [Int], colorArray.count == 3, let headRatio = playerData["head_ratio"] as? CGFloat else { return Player(id: "错误") }
+        let color = SKColor(red: CGFloat(colorArray[0])/255.0,
+                          green: CGFloat(colorArray[1])/255.0,
+                          blue: CGFloat(colorArray[2])/255.0,
+                          alpha: 1.0)
         let playerSize = serverToScreenDistance(1) // 假设服务器端玩家大小为1
+        let player = Player(id: id)
+        var isHead = true
         for body in snakeArray {
             let x = body[0]
             let y = body[1]
-            let snakeBodyNode = SKSpriteNode(color: color, size: CGSize(width: playerSize, height: playerSize))
+            let snakeBodyNode = isHead ? ColoredSpriteNode(texture: snakeHeadTexture) : ColoredSpriteNode(texture: snakeBodyTexture)
+            snakeBodyNode.setColorFromServer(color: color)
+            snakeBodyNode.size = CGSize(width: headRatio * playerSize, height: headRatio * playerSize)
+            isHead = false
             let screenPosition = serverToScreenPosition(CGPoint(x: x, y: y))
             snakeBodyNode.position = screenPosition
             player.snakeNode.addChild(snakeBodyNode)
@@ -414,15 +416,20 @@ class GameScene: SKScene {
         idLabel.fontName = "PingFangSC-Semibold"
         idLabel.fontColor = .white
         idLabel.position = screenPosition
-        idLabel.zPosition = 9
+        idLabel.zPosition = 109
         addChild(idLabel)
         addChild(player.snakeNode)
         
         return player
     }
     
-    func updatePlayerPosition(id: String, snakeArray: [[CGFloat]], color: SKColor, headRatio: CGFloat) {
+    func updatePlayerPosition(id: String, playerData:[String: Any]) {
         guard let player = players[id] else { return }
+        guard let snakeArray = playerData["snake"] as? [[CGFloat]], let colorArray = playerData["color"] as? [Int], colorArray.count == 3, let headRatio = playerData["head_ratio"] as? CGFloat, let direction = playerData["direction"] as? [CGFloat] else { return }
+        let color = SKColor(red: CGFloat(colorArray[0])/255.0,
+                          green: CGFloat(colorArray[1])/255.0,
+                          blue: CGFloat(colorArray[2])/255.0,
+                          alpha: 1.0)
         let playerSize = serverToScreenDistance(1) // 假设服务器端玩家大小为1
         if let idLabel = childNode(withName: "玩家\(id)的标签") as? SKLabelNode {
             // 更新玩家ID标签
@@ -453,11 +460,20 @@ class GameScene: SKScene {
                 let moveAction = SKAction.move(to: screenPosition, duration: updateInterval)
                 let groupAction = SKAction.group([moveAction, scaleAction])
                 snakeBodyNode.run(groupAction)
+                if index == 0 {
+                    // 按照服务器direction数据旋转蛇头
+                    let angle = atan2(direction[1], direction[0])
+                    snakeBodyNode.zRotation = angle
+                }
+                snakeBodyNode.zPosition = 100 - CGFloat(index) / CGFloat(snakeArray.count)
                 snakeBodyNode.isHidden = false
             } else {
-                let snakeBodyNode = SKSpriteNode(color: color, size: CGSize(width: playerSize, height: playerSize))
+                let snakeBodyNode = ColoredSpriteNode(texture: snakeBodyTexture)
+                snakeBodyNode.setColorFromServer(color: color)
+                snakeBodyNode.size = CGSize(width: playerSize, height: playerSize)
                 snakeBodyNode.position = screenPosition
                 player.snakeNode.addChild(snakeBodyNode)
+                snakeBodyNode.zPosition = 100 - CGFloat(index) / CGFloat(snakeArray.count)
             }
         }
     }
@@ -492,14 +508,18 @@ class GameScene: SKScene {
             guard let foodPos = food[1] as? [CGFloat] else { return }
             let x = foodPos[0]
             let y = foodPos[1]
+            /*
             let (red, green, blue) = foodColors[foodName] ?? (0, 0, 0)
             let color = SKColor(red: CGFloat(red)/255.0,
                               green: CGFloat(green)/255.0,
                               blue: CGFloat(blue)/255.0,
                               alpha: 1.0)
+             */
             //food_img = self.food_img_list[self.food_types[food_name]["img_index"]]
             guard let foodNode = allFoodNode.children[index] as? SKSpriteNode else { return }
-            foodNode.color = color
+            // foodNode.color = color
+            guard let index = foodTypes?[foodName]?["img_index"] as? Int else { return }
+            foodNode.texture = foodTextures[index]
             foodNode.size = CGSize(width: foodSize, height: foodSize)
             let screenPosition = serverToScreenPosition(CGPoint(x: x, y: y))
             foodNode.position = screenPosition
@@ -637,7 +657,6 @@ extension GameScene: GameSocketManagerDelegate {
         // self.invisible_factor = game_config["invisible_factor"]
         
         foodTypes = gameConfig["food_types"] as? [String: [String: Any]]
-        print("加载食物类型\(foodTypes)")
     }
     
     private func handleGameState(_ data: [String : Any]) {
@@ -654,15 +673,10 @@ extension GameScene: GameSocketManagerDelegate {
         // 更新现有玩家位置
         for (id, playerData) in playersData {
             guard let playerData = playerData as? [String: Any] else { return }
-            guard let playerSnake = playerData["snake"] as? [[CGFloat]], let colorArray = playerData["color"] as? [Int], colorArray.count == 3, let headRatio = playerData["head_ratio"] as? CGFloat else { return }
-            let color = SKColor(red: CGFloat(colorArray[0])/255.0,
-                              green: CGFloat(colorArray[1])/255.0,
-                              blue: CGFloat(colorArray[2])/255.0,
-                              alpha: 1.0)
             if players[id] != nil {
-                updatePlayerPosition(id: id, snakeArray: playerSnake, color: color, headRatio:headRatio)
+                updatePlayerPosition(id: id, playerData: playerData)
             } else {
-                let player = createPlayer(id: id, snakeArray:playerSnake, color: color)
+                let player = createPlayer(id: id, playerData: playerData)
                 players[id] = player
                 playersCountLabel.text = "玩家: \(players.count)"
             }

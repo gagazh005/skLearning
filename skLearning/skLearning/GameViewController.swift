@@ -29,11 +29,6 @@ class GameViewController: UIViewController {
             // 改为直接创建场景实例：
             let scene = GameScene(size: screenSize)
             scene.scaleMode = .resizeFill
-            
-            // Set the scene coordinates (0, 0) to the center of the screen.
-            // scene.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-            
-            // Present the scene
             view.presentScene(scene)
             view.ignoresSiblingOrder = true
             view.showsFPS = true
