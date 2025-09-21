@@ -11,6 +11,7 @@ class GameScene: SKScene {
     private var socketManager: GameSocketManager!
     private let serverHost = "192.168.1.17"
     private let serverPort: Int32 = 5555
+    private var connected = false
     
     // 服务器定义的边界（根据你的Python服务器代码）
     var serverBounds = CGRect(x: 0, y: 0, width: 40, height: 30) // 根据你的服务器调整
@@ -33,28 +34,10 @@ class GameScene: SKScene {
     var currentMovement = CGVector(dx: 0,dy: 0)
     var foodTypes: [String: [String: Any]]?
     var foodTextures: [SKTexture] = []
-    let foodColors = [
-        "桃子": (255, 192, 203),    // 粉色
-        "香蕉": (255, 255, 0),      // 黄色
-        "樱桃": (255, 0, 0),        // 红色
-        "葡萄": (128, 0, 128),      // 紫色
-        "番茄": (255, 99, 71),      // 番茄红
-        "辣椒": (255, 69, 0),       // 橙红色
-        "猕猴桃": (154, 205, 50),   // 黄绿色
-        "胡萝卜": (255, 140, 0),    // 深橙色
-        "茄子": (75, 0, 130),       // 靛蓝色
-        "蘑菇": (210, 180, 140),    // 棕褐色
-        "草莓": (255, 20, 147),     // 深粉色
-        "菠萝": (255, 223, 0),      // 金黄色
-        "柠檬": (255, 255, 0),      // 亮黄色
-        "白萝卜": (245, 245, 245),  // 白色
-        "西瓜": (60, 179, 113),     // 绿色
-        "拼盘": (255, 215, 0)       // 金色
-    ]
     var snakeHeadTexture: SKTexture = SKTexture(imageNamed: "snakeHead")
     var snakeBodyTexture: SKTexture = SKTexture(imageNamed: "snakeBody")
     
-    // MARK: - UI元素
+    // MARK: - 设定背景和UI元素
     var statusLabel: SKLabelNode!
     var connectButton: SKSpriteNode!
     var playerIdLabel: SKLabelNode!
@@ -116,10 +99,6 @@ class GameScene: SKScene {
         let yOffset = (size.height - displayHeight) / 2 + safeAreaInsets.top
         
         displayBounds = CGRect(x: xOffset, y: yOffset, width: displayWidth, height: displayHeight)
-        
-        print("服务器边界: \(serverBounds)")
-        print("显示边界: \(displayBounds)")
-        print("缩放因子: \(scaleFactor)")
     }
     
     func setupGameBorder() {
@@ -176,12 +155,75 @@ class GameScene: SKScene {
         connectButton.name = "connectButton"
         
         let buttonLabel = SKLabelNode(text: "连接")
+        buttonLabel.name = "connectButtonLabel"
         buttonLabel.fontColor = .white
         buttonLabel.fontSize = 12
         buttonLabel.verticalAlignmentMode = .center
         connectButton.addChild(buttonLabel)
         
         addChild(connectButton)
+    }
+    
+    // MARK: - 捕捉摇杆和触屏输入信号
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first, let startPoint = startPoint else { return }
+        if let _ = currentCircle, let _ = currentLine { return }
+        let location = touch.location(in: self)
+        let nodes = self.nodes(at: location)
+        
+        // print("触摸位置: \(location)")
+        // print("触摸到的节点: \(nodes.map { $0.name ?? "无名节点" })")
+        
+        for node in nodes {
+            if node.name == "connectButton" || node.parent?.name == "connectButton" {
+                if !connected {
+                    connectToServer()
+                    sendUsernameToServer()
+                    guard let LabelNode = connectButton.childNode(withName: "connectButtonLabel") as? SKLabelNode else { return }
+                    LabelNode.text = "断开连接"
+                } else {
+                    sendQuitGameToServer()
+                    didDisconnectFromServer()
+                    guard let LabelNode = connectButton.childNode(withName: "connectButtonLabel") as? SKLabelNode else { return }
+                    LabelNode.text = "连接"
+                }
+                return
+            }
+        }
+        
+        // 创建新的圆圈
+        currentCircle = createCircle(at: location)
+        currentCircle.map { addChild($0) }
+        
+        // 创建新的直线
+        currentLine = createLine(from: startPoint, to: location)
+        currentLine.map { addChild($0) }
+        
+        // 蛇头朝向触摸点
+        towards(to: location)
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard let touch = touches.first else { return }
+        let location = touch.location(in: self)
+        
+        // 更新直线和圆圈到当前手指位置
+        updateLine(to: location)
+        updateCircle(to: location)
+        // 蛇头朝向触摸点
+        towards(to: location)
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        // 触摸结束时移除直线和圆圈
+        removeLine()
+        removeCircle()
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        // 触摸取消时移除直线和圆圈
+        removeLine()
+        removeCircle()
     }
     
     private func setupJoyStick() {
@@ -220,7 +262,118 @@ class GameScene: SKScene {
         }
     }
     
-    func sendMovementToServer() {
+    // MARK: - 收发、处理游戏数据
+    private func handleGameEvent(_ data: [String: Any]) {
+        guard let gameEvent = data["game_event"] as? String, let content = data["content"] else { return }
+        var message = ""
+        switch gameEvent {
+        case "join_game":
+            guard let content = content as? [String: Any] else { return }
+            if let gameConfig = content["game_config"] as? [String : Any] {
+                loadConfig(gameConfig)
+                guard let playerId = content["player_id"] as? Int else { return }
+                myPlayerId = String(playerId)
+                // self.game_paused = game_data.get("game_paused")
+                // if self.game_paused:
+                // pygame.mixer.music.pause()
+                playerIdLabel.text = "ID: \(playerId)"
+            }
+            // self.load_images()
+            // self.load_sound()
+            // pygame.mixer.music.play(loops=-1)
+            message = "加入服务器端成功"
+        case "game_over":
+            message = "游戏结束！"
+        case "quit_game":
+            message = "退出游戏"
+            // pygame.mixer.music.stop()
+        case "reborn":
+            message = "重生成功"
+            // pygame.mixer.music.unpause()
+        case "pause_game":
+            guard let (game_paused, player_id, name, pause_count) = content as? (Bool, Int, String, Int) else { return }
+            if game_paused {
+                message = "玩家\(player_id):\(name)暂停游戏,还剩\(pause_count)次"
+                // pygame.mixer.music.pause()
+            }
+            else {
+                message = "玩家\(player_id):\(name)恢复游戏"
+                // pygame.mixer.music.unpause()
+            }
+        case "eating_food":
+            // self.eat_sound.play()
+            // effect = food_types[content]["effect"]
+            // points = food_types[content]["points"]
+            message = "\(content)"
+            // message = "\(effect),加\(points)分"
+            /*
+             if food_types[content].keys().contains("effect_time"):
+             new_effect_circle = EffectCircle(effect, self.food_types[content]["effect_time"],
+             40 + 80 * list(self.effect_times.keys()).index(effect),
+             self.screen_height - 40)
+             self.effect_circles.append(new_effect_circle)
+             */
+        case "crash":
+            // pygame.mixer.music.pause()
+            // self.death_sound.play()
+            message = "撞毁"
+        default:
+            message = "游戏事件类型错误!"
+            // new_text = RisingText(message, self.text_x, self.text_y)
+            // self.rising_texts.append(new_text)
+        }
+        statusLabel.text = message
+        statusLabel.fontColor = .white
+    }
+    
+    private func loadConfig(_ gameConfig: [String: Any]) {
+        // self.s_version = game_config["s_version"]
+        guard let grid = gameConfig["grid"] as? [Int] else { return }
+        let width = grid[0]
+        let height = grid[1]
+        serverBounds = CGRect(x: 0, y: 0, width: width, height: height)
+        calculateDisplayBounds()
+        setupGameBorder()
+        adjustUIPosition()
+        
+        // self.invisible_factor = game_config["invisible_factor"]
+        
+        foodTypes = gameConfig["food_types"] as? [String: [String: Any]]
+    }
+    
+    private func handleGameState(_ data: [String : Any]) {
+        guard let playersData = data["players"] as? [String: Any] else { return }
+        if let foodArray = data["food_list"] as? [[Any]] {
+            if allFoodNode.children.isEmpty {
+                addChild(allFoodNode)
+                createFood(foodArray.count)
+            } else {
+                updateFood(foodArray)
+            }
+        }
+        
+        // 更新现有玩家位置
+        for (id, playerData) in playersData {
+            guard let playerData = playerData as? [String: Any] else { return }
+            if players[id] != nil {
+                updatePlayerPosition(id: id, playerData: playerData)
+            } else {
+                let player = createPlayer(id: id, playerData: playerData)
+                players[id] = player
+                playersCountLabel.text = "玩家: \(players.count)"
+            }
+        }
+        
+        // 移除已断开连接的玩家
+        for (id, _) in players {
+            if playersData[id] == nil {
+                removePlayer(id: id)
+                playersCountLabel.text = "玩家: \(players.count)"
+            }
+        }
+    }
+    
+    private func sendMovementToServer() {
         guard let _ = myPlayerId, currentMovement != CGVector(dx: 0, dy: 0) else {
             return
         }
@@ -232,8 +385,36 @@ class GameScene: SKScene {
         socketManager.sendData(movementData)
     }
     
+    private func sendQuitGameToServer() {
+        let quitGameData: [String: String] = [
+            "type": "quit_game"
+        ]
+        socketManager.sendData(quitGameData)
+    }
+    
+    func setupNetwork() {
+        socketManager = GameSocketManager()
+        socketManager.delegate = self
+    }
+    
+    func connectToServer() {
+        statusLabel.text = "连接中..."
+        statusLabel.fontColor = .yellow
+        socketManager.connectToServer(host: serverHost, port: serverPort)
+    }
+    
+    func sendUsernameToServer() {
+        let usernameData: [String: Any] = [
+            "type": "username",
+            "username": "gagazh"
+        ]
+        socketManager.sendData(usernameData)
+    }
+    
+    // MARK: - 处理UI布局
     override func didChangeSize(_ oldSize: CGSize) {
         super.didChangeSize(oldSize)
+        guard oldSize != size else { return }
         // 屏幕尺寸变化时重新计算边界
         calculateDisplayBounds()
         setupGameBorder()
@@ -241,67 +422,12 @@ class GameScene: SKScene {
     }
     
     func adjustUIPosition() {
-        guard let _ = statusLabel else {
-            print("还没有初始化UI元素，就开始调整位置！")
-            return
-        }
+        guard let _ = statusLabel else { return }
         // 将UI元素移到边界内
         statusLabel.position = CGPoint(x: size.width / 2, y: size.height - 40)
         playersCountLabel.position = CGPoint(x: 30, y: size.height - 40)
         playerIdLabel.position = CGPoint(x: 100, y: size.height - 40)
-        connectButton.position = CGPoint(x: size.width - 60, y: size.height - 20)
-    }
-    
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first, let startPoint = startPoint else { return }
-        if let _ = currentCircle, let _ = currentLine { return }
-        let location = touch.location(in: self)
-        let nodes = self.nodes(at: location)
-        
-        // print("触摸位置: \(location)")
-        // print("触摸到的节点: \(nodes.map { $0.name ?? "无名节点" })")
-        
-        for node in nodes {
-            if node.name == "connectButton" || node.parent?.name == "connectButton" {
-                connectToServer()
-                sendUsernameToServer()
-                return
-            }
-        }
-        
-        // 创建新的圆圈
-        currentCircle = createCircle(at: location)
-        currentCircle.map { addChild($0) }
-        
-        // 创建新的直线
-        currentLine = createLine(from: startPoint, to: location)
-        currentLine.map { addChild($0) }
-        
-        // 蛇头朝向触摸点
-        towards(to: location)
-    }
-    
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
-        let location = touch.location(in: self)
-        
-        // 更新直线和圆圈到当前手指位置
-        updateLine(to: location)
-        updateCircle(to: location)
-        // 蛇头朝向触摸点
-        towards(to: location)
-    }
-    
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        // 触摸结束时移除直线和圆圈
-        removeLine()
-        removeCircle()
-    }
-    
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        // 触摸取消时移除直线和圆圈
-        removeLine()
-        removeCircle()
+        connectButton.position = CGPoint(x: size.width - 60, y: size.height - 40)
     }
     
     // 创建圆圈
@@ -362,27 +488,7 @@ class GameScene: SKScene {
     func towards(to point: CGPoint) {
         guard let startPoint = startPoint else { return }
         let theta = atan2(point.y - startPoint.y, point.x - startPoint.x)
-        // snakeHeadNode.zRotation = theta
         currentMovement = CGVector(dx: cos(theta), dy: sin(theta))
-    }
-    
-    func setupNetwork() {
-        socketManager = GameSocketManager()
-        socketManager.delegate = self
-    }
-    
-    func connectToServer() {
-        statusLabel.text = "连接中..."
-        statusLabel.fontColor = .yellow
-        socketManager.connectToServer(host: serverHost, port: serverPort)
-    }
-    
-    func sendUsernameToServer() {
-        let usernameData: [String: Any] = [
-            "type": "username",
-            "username": "gagazh"
-        ]
-        socketManager.sendData(usernameData)
     }
     
     // MARK: - 玩家管理
@@ -539,10 +645,6 @@ class Player {
         self.snakeNode = SKNode()
         self.snakeNode.position = CGPoint(x: 0, y: 0)
     }
-    
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
 }
 
 // MARK: - 网络管理器代理
@@ -550,11 +652,13 @@ extension GameScene: GameSocketManagerDelegate {
     func didConnectToServer() {
         statusLabel.text = "已连接"
         statusLabel.fontColor = .green
+        connected = true
     }
     
     func didDisconnectFromServer() {
         statusLabel.text = "连接断开"
         statusLabel.fontColor = .red
+        connected = false
         
         // 清理所有玩家
         for (id, _) in players {
@@ -575,120 +679,6 @@ extension GameScene: GameSocketManagerDelegate {
             gameState = data
         default:
             print("未知消息类型: \(type)")
-        }
-    }
-    
-    private func handleGameEvent(_ data: [String: Any]) {
-        guard let gameEvent = data["game_event"] as? String, let content = data["content"] else {
-            print("无效的add_player数据")
-            return
-        }
-        var message = ""
-        switch gameEvent {
-        case "join_game":
-            guard let content = content as? [String: Any] else { return }
-            if let gameConfig = content["game_config"] as? [String : Any] {
-                loadConfig(gameConfig)
-                guard let playerId = content["player_id"] as? Int else { return }
-                myPlayerId = String(playerId)
-                // self.game_paused = game_data.get("game_paused")
-                // if self.game_paused:
-                // pygame.mixer.music.pause()
-                playerIdLabel.text = "ID: \(playerId)"
-            }
-            // self.load_images()
-            // self.load_sound()
-            // pygame.mixer.music.play(loops=-1)
-            message = "加入服务器端成功"
-        case "game_over":
-            message = "游戏结束！"
-        case "quit_game":
-            message = "退出游戏"
-            // pygame.mixer.music.stop()
-        case "reborn":
-            message = "重生成功"
-            // pygame.mixer.music.unpause()
-        case "pause_game":
-            guard let (game_paused, player_id, name, pause_count) = content as? (Bool, Int, String, Int) else { return }
-            if game_paused {
-                message = "玩家\(player_id):\(name)暂停游戏,还剩\(pause_count)次"
-                // pygame.mixer.music.pause()
-            }
-            else {
-                message = "玩家\(player_id):\(name)恢复游戏"
-                // pygame.mixer.music.unpause()
-            }
-        case "eating_food":
-            // self.eat_sound.play()
-            // effect = food_types[content]["effect"]
-            // points = food_types[content]["points"]
-            message = "\(content)"
-            // message = "\(effect),加\(points)分"
-            /*
-             if food_types[content].keys().contains("effect_time"):
-             new_effect_circle = EffectCircle(effect, self.food_types[content]["effect_time"],
-             40 + 80 * list(self.effect_times.keys()).index(effect),
-             self.screen_height - 40)
-             self.effect_circles.append(new_effect_circle)
-             */
-        case "crash":
-            // pygame.mixer.music.pause()
-            // self.death_sound.play()
-            message = "撞毁"
-        default:
-            message = "游戏事件类型错误!"
-            // new_text = RisingText(message, self.text_x, self.text_y)
-            // self.rising_texts.append(new_text)
-        }
-        statusLabel.text = message
-        statusLabel.fontColor = .white
-    }
-    
-    private func loadConfig(_ gameConfig: [String: Any]) {
-        // self.s_version = game_config["s_version"]
-        guard let grid = gameConfig["grid"] as? [Int] else { return }
-        let width = grid[0]
-        let height = grid[1]
-        serverBounds = CGRect(x: 0, y: 0, width: width, height: height)
-        calculateDisplayBounds()
-        setupGameBorder()
-        adjustUIPosition()
-        
-        // self.invisible_factor = game_config["invisible_factor"]
-        
-        foodTypes = gameConfig["food_types"] as? [String: [String: Any]]
-    }
-    
-    private func handleGameState(_ data: [String : Any]) {
-        guard let playersData = data["players"] as? [String: Any] else { return }
-        if let foodArray = data["food_list"] as? [[Any]] {
-            if allFoodNode.children.isEmpty {
-                addChild(allFoodNode)
-                createFood(foodArray.count)
-            } else {
-                updateFood(foodArray)
-            }
-        }
-        
-        // 更新现有玩家位置
-        for (id, playerData) in playersData {
-            guard let playerData = playerData as? [String: Any] else { return }
-            if players[id] != nil {
-                updatePlayerPosition(id: id, playerData: playerData)
-            } else {
-                let player = createPlayer(id: id, playerData: playerData)
-                players[id] = player
-                playersCountLabel.text = "玩家: \(players.count)"
-            }
-        }
-        
-        // 移除已断开连接的玩家
-        let currentPlayerIds = Set(playersData.keys)
-        let existingPlayerIds = Set(players.keys)
-        let disconnectedPlayers = existingPlayerIds.subtracting(currentPlayerIds)
-        
-        for id in disconnectedPlayers {
-            removePlayer(id: id)
         }
     }
 }
