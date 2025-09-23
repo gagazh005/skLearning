@@ -55,7 +55,7 @@ class GameScene: SKScene {
         adjustUIPosition()
         setupJoyStick()
         for index in 0...66 {
-            let texture = SKTexture(imageNamed: "food_\(index).png")
+            let texture = SKTexture(imageNamed: "food_\(index)")
             foodTextures.append(texture)
         }
     }
@@ -317,8 +317,6 @@ class GameScene: SKScene {
             message = "撞毁"
         default:
             message = "游戏事件类型错误!"
-            // new_text = RisingText(message, self.text_x, self.text_y)
-            // self.rising_texts.append(new_text)
         }
         statusLabel.text = message
         statusLabel.fontColor = .white
@@ -659,7 +657,6 @@ class Player {
         self.playerId = id
         // self.name = name
         self.snakeNode = SKNode()
-        self.snakeNode.position = CGPoint(x: 0, y: 0)
     }
 }
 
