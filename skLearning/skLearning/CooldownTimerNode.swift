@@ -5,9 +5,9 @@ class CooldownTimerNode: SKNode {
     private var maskNode: SKShapeNode!
     private var cropNode: SKCropNode!
     private var progressCircle: SKShapeNode!
+    var nameLabel: SKLabelNode!
     
-    var name: String = ""
-    var radius: CGFloat = 50
+    var radius: CGFloat = 30
     var duration: TimeInterval = 5.0
     var isCoolingDown = false
     
@@ -25,13 +25,15 @@ class CooldownTimerNode: SKNode {
         // 背景圆（灰色）
         backgroundCircle = SKShapeNode(circleOfRadius: radius)
         backgroundCircle.fillColor = .gray
+        backgroundCircle.alpha = 0.1
         backgroundCircle.strokeColor = .darkGray
         backgroundCircle.lineWidth = 3
         addChild(backgroundCircle)
         
         // 进度圆（蓝色）
         progressCircle = SKShapeNode(circleOfRadius: radius)
-        progressCircle.fillColor = .blue
+        progressCircle.fillColor = .gray
+        backgroundCircle.alpha = 0.1
         progressCircle.strokeColor = .clear
         
         // 裁剪节点
@@ -41,16 +43,18 @@ class CooldownTimerNode: SKNode {
         // 遮罩节点（初始为全遮罩）
         maskNode = SKShapeNode(rect: CGRect(x: -radius, y: -radius, width: radius * 2, height: radius * 2))
         maskNode.fillColor = .black
+        maskNode.alpha = 0.3
         cropNode.maskNode = maskNode
         addChild(cropNode)
 
         // 名称标签
-        statusLabel = SKLabelNode(text: name)
-        statusLabel.position = CGPoint(x: -radius, y: -radius)
-        statusLabel.fontColor = .red
-        statusLabel.fontName = "PingFangSC-Semibold"
-        statusLabel.fontSize = radius * 2
-        addChild(statusLabel)
+        nameLabel = SKLabelNode(text: name)
+        nameLabel.position = CGPoint(x: 0, y: -radius / 2)
+        nameLabel.fontColor = .white
+        nameLabel.alpha = 0.5
+        nameLabel.fontName = "PingFangSC-Semibold"
+        nameLabel.fontSize = radius
+        addChild(nameLabel)
     }
     
     func startCooldown() {
@@ -62,12 +66,12 @@ class CooldownTimerNode: SKNode {
         let animateMask = SKAction.customAction(withDuration: duration) { [weak self] node, elapsedTime in
             guard let self = self else { return }
             
-            let progress = elapsedTime / CGFloat(self.duration)
+            let progress = 1 - elapsedTime / CGFloat(self.duration)
             let endAngle = CGFloat.pi * 2 * progress - CGFloat.pi / 2 // 从顶部开始
             
             let path = UIBezierPath()
             path.move(to: CGPoint(x: 0, y: 0))
-            path.addArc(withCenter: CGPoint.zero, radius: self.radius * 1.5, 
+            path.addArc(withCenter: CGPoint.zero, radius: self.radius,
                        startAngle: -CGFloat.pi / 2, endAngle: endAngle, clockwise: true)
             path.close()
             

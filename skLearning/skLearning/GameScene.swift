@@ -83,7 +83,6 @@ class GameScene: SKScene {
     func calculateDisplayBounds() {
         // 获取屏幕可用空间（考虑安全区域）
         let safeAreaInsets = view?.safeAreaInsets ?? UIEdgeInsets.zero
-        print("safeAreaInsets=\(safeAreaInsets)")
         let availableWidth = size.width - safeAreaInsets.left - safeAreaInsets.right
         let availableHeight = size.height - safeAreaInsets.top - safeAreaInsets.bottom
         // 计算保持纵横比的缩放因子
@@ -304,12 +303,12 @@ class GameScene: SKScene {
         case "eating_food":
             // self.eat_sound.play()
             guard let foodName = content as? String else { return }
-            guard let foodDetail = foodTypes[foodName] as? [String: Any] else { return }
-            guard let effect = foodDetail["effect"], let points = foodDetail["points"] else { return }
+            guard let foodDetail = foodTypes?[foodName] as? [String: Any] else { return }
+            guard let effect = foodDetail["effect"] as? String, let points = foodDetail["points"] as? Int else { return }
             message = "吃了\(foodName),\(effect),加\(points)分"
-            guard let cooldownTimer = effectCooldownTimers[effect] as? CooldownTimerNode, let effect_time = foodDetail["effect_time"] as? Double else { return }
+            guard let cooldownTimer = effectCooldownTimersDict[effect], let effect_time = foodDetail["effect_time"] as? Double else { return }
             cooldownTimer.duration = effect_time
-            cooldownTimer.startCooldown        
+            cooldownTimer.startCooldown()
             cooldownTimer.isHidden = false        
         case "crash":
             // pygame.mixer.music.pause()
@@ -335,19 +334,21 @@ class GameScene: SKScene {
         // self.invisible_factor = game_config["invisible_factor"]
         
         foodTypes = gameConfig["food_types"] as? [String: [String: Any]]
-        guard let effectNamesArray = foodTypes.compactMap { $1.keys.contains("effect_time") ? $1["effect"] : nil } as? [String] else { return }
+        guard let effectNamesArray = foodTypes?.compactMap({ $1.keys.contains("effect_time") ? $1["effect"] : nil }) as? [String] else { return }
         effectCooldownTimersDict = createCooldownTimers(nameArray: effectNamesArray)
     }
 
     private func createCooldownTimers(nameArray: [String]) -> [String: CooldownTimerNode] {
         // 创建冷却计时器组
         let cooldownTimers = Dictionary(uniqueKeysWithValues: nameArray.indices.map {
-            cooldownTimer = CooldownTimerNode()
-            cooldownTimer.radius = 20
-            cooldownTimer.duration = 0 
-            cooldownTimer.position = CGPoint(x: size.width - 40 - 50 * $0, y: 50)
-            cooldownTimer.name = nameArray[$0].first
+            let cooldownTimer = CooldownTimerNode()
+            cooldownTimer.duration = 0
             cooldownTimer.isHidden = true
+            let xPos = size.width - 10 - cooldownTimer.radius - (10 + 2 * cooldownTimer.radius) * CGFloat($0)
+            let yPos = 10 + cooldownTimer.radius
+            cooldownTimer.position = CGPoint(x: xPos, y: yPos)
+            let effectName = nameArray[$0]
+            cooldownTimer.nameLabel.text = String(effectName.prefix(1))
             addChild(cooldownTimer)
             return (nameArray[$0], cooldownTimer)
         })
