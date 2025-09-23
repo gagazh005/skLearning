@@ -42,6 +42,7 @@ class GameScene: SKScene {
     var connectButton: SKSpriteNode!
     var playerIdLabel: SKLabelNode!
     var playersCountLabel: SKLabelNode!
+    var effectCooldownTimersDict: [String: CooldownTimerNode] = [:]
     
     override func didMove(to view: SKView) {
         setupBackground()
@@ -302,17 +303,14 @@ class GameScene: SKScene {
             }
         case "eating_food":
             // self.eat_sound.play()
-            // effect = food_types[content]["effect"]
-            // points = food_types[content]["points"]
-            message = "\(content)"
-            // message = "\(effect),加\(points)分"
-            /*
-             if food_types[content].keys().contains("effect_time"):
-             new_effect_circle = EffectCircle(effect, self.food_types[content]["effect_time"],
-             40 + 80 * list(self.effect_times.keys()).index(effect),
-             self.screen_height - 40)
-             self.effect_circles.append(new_effect_circle)
-             */
+            guard let foodName = content as? String else { return }
+            guard let foodDetail = foodTypes[foodName] as? [String: Any] else { return }
+            guard let effect = foodDetail["effect"], let points = foodDetail["points"] else { return }
+            message = "吃了\(foodName),\(effect),加\(points)分"
+            guard let cooldownTimer = effectCooldownTimers[effect] as? CooldownTimerNode, let effect_time = foodDetail["effect_time"] as? Double else { return }
+            cooldownTimer.duration = effect_time
+            cooldownTimer.startCooldown        
+            cooldownTimer.isHidden = false        
         case "crash":
             // pygame.mixer.music.pause()
             // self.death_sound.play()
@@ -339,8 +337,26 @@ class GameScene: SKScene {
         // self.invisible_factor = game_config["invisible_factor"]
         
         foodTypes = gameConfig["food_types"] as? [String: [String: Any]]
+        guard let effectNamesArray = foodTypes.compactMap { $1.keys.contains("effect_time") ? $1["effect"] : nil } as? [String] else { return }
+        effectCooldownTimersDict = createCooldownTimers(nameArray: effectNamesArray)
     }
-    
+
+    private func createCooldownTimers(nameArray: [String]) -> [String: CooldownTimerNode] {
+        // 创建冷却计时器组
+        let cooldownTimers = Dictionary(uniqueKeysWithValues: nameArray.indices.map {
+            cooldownTimer = CooldownTimerNode()
+            cooldownTimer.radius = 20
+            cooldownTimer.duration = 0 
+            cooldownTimer.position = CGPoint(x: size.width - 40 - 50 * $0, y: 50)
+            cooldownTimer.name = nameArray[$0].first
+            cooldownTimer.isHidden = true
+            addChild(cooldownTimer)
+            return (nameArray[$0], cooldownTimer)
+        })
+        return cooldownTimers
+    }
+
+
     private func handleGameState(_ data: [String : Any]) {
         guard let playersData = data["players"] as? [String: Any] else { return }
         if let foodArray = data["food_list"] as? [[Any]] {
