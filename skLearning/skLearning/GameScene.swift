@@ -333,10 +333,10 @@ class GameScene: SKScene {
         setupGameBorder()
         adjustUIPosition()
         
-        invisibleFactor = gameConfig["invisible_factor"] as? TimeInterval
+        invisibleFactor = gameConfig["invisible_factor"] as? CGFloat
         foodTypes = gameConfig["food_types"] as? [String: [String: Any]]
         guard let effectNamesArray = foodTypes?.compactMap({ $1.keys.contains("effect_time") ? $1["effect"] : nil }) as? [String] else { return }
-        guard let effectTimesArray = foodTypes?.compactMap({ $1.keys.contains("effect_time") ? $1["effect_time"] : nil }) as? [TimeInterval] else { return }
+        guard let effectTimesArray = foodTypes?.compactMap({ $1.keys.contains("effect_time") ? $1["effect_time"] : nil }) as? [CGFloat] else { return }
         effectTimesDict = Dictionary(uniqueKeysWithValues: zip(effectNamesArray, effectTimesArray))
         effectCooldownTimersDict = createCooldownTimers(nameArray: effectNamesArray)
     }
@@ -521,7 +521,7 @@ class GameScene: SKScene {
         for body in snakeArray {
             let x = body[0]
             let y = body[1]
-            let snakeBodyNode = isHead ? ColoredSpriteNode(texture: snakeHeadTexture, isHead: true) : ColoredSpriteNode(texture: snakeBodyTexture)
+            let snakeBodyNode = isHead ? ColoredSpriteNode(texture: snakeHeadTexture) : ColoredSpriteNode(texture: snakeBodyTexture)
             snakeBodyNode.setColorFromServer(color: color)
             snakeBodyNode.size = CGSize(width: headRatio * playerSize, height: headRatio * playerSize)
             isHead = false
@@ -591,11 +591,13 @@ class GameScene: SKScene {
                     // 按照服务器direction数据旋转蛇头
                     let angle = atan2(direction[1], direction[0])
                     snakeBodyNode.zRotation = angle
-                    snakeBodyNode.updateGlow(playerTimesDict: playerTimesDict)
+                    snakeBodyNode.glow(playerTimesDict: playerTimesDict)
                 }
                 snakeBodyNode.zPosition = 100 - CGFloat(index) / CGFloat(snakeArray.count)
-                snakeBodyNode.setAlphaFrom(playerTimesDict: playerTimesDict, totallyTransparent: id != myPlayerId)
                 snakeBodyNode.isHidden = false
+                let alpha: CGFloat = getAlphaFrom(playerTimesDict: playerTimesDict, totallyTransparent: id != myPlayerId)
+                snakeBodyNode.alpha = alpha
+                print("snakeBodyNode.alpha = \(snakeBodyNode.alpha)")
             } else {
                 let snakeBodyNode = ColoredSpriteNode(texture: snakeBodyTexture)
                 snakeBodyNode.setColorFromServer(color: color)
@@ -606,6 +608,25 @@ class GameScene: SKScene {
             }
         }
     }
+    
+    func getAlphaFrom(playerTimesDict: [String: CGFloat], totallyTransparent: Bool) -> CGFloat {
+        // 从玩家数据中获取当前显形、隐形时限
+        guard let playerVisibleTime = playerTimesDict["显形"], let playerInvisibleTime = playerTimesDict["隐身"],
+              let visibleTime = effectTimesDict["显形"], let invisibleTime = effectTimesDict["隐身"],
+              let invisibleFactor = invisibleFactor else { return 1.0 }
+        var alpha: CGFloat = 1
+        if 0 < playerVisibleTime && playerVisibleTime <= visibleTime {
+            alpha = min(1, 1 - playerVisibleTime / visibleTime)
+        } else if playerInvisibleTime > invisibleTime / invisibleFactor {
+            let enemyAlpha = max(0, 1 - (invisibleTime - playerInvisibleTime) * invisibleFactor / invisibleTime)
+            alpha = !totallyTransparent && enemyAlpha < 0.2 ? 0.2 : enemyAlpha
+        } else {
+            let enemyAlpha = min(1, 1 - playerInvisibleTime / invisibleTime * invisibleFactor)
+            alpha = !totallyTransparent && enemyAlpha < 0.2 ? 0.2 : enemyAlpha
+        }
+        return alpha
+    }
+
     
     func removePlayer(id: String) {
         players[id]?.snakeNode.removeFromParent()

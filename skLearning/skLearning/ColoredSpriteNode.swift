@@ -7,30 +7,27 @@ class ColoredSpriteNode: SKSpriteNode {
             updateColor()
         }
     }
-
-    override var size: CGSize = CGSize(width: 0, height: 0) {
-        didSet {
-            let width = size.width
-            let sizes: [CGFloat] = [width + 120, width + 60, width + 30]
-            let alphas: [CGFloat] = [0.3, 0.2, 0.1]
-            guard let glowNode = childNode(withName: "glow") as? SKNode else { return }
-            for i in 0..<sizes.count {
-                if let circle = glowNode.childNode(withName: "circle\(i)") as? SKSpriteNode {
-                    circle.radius = sizes[i]/2
-                }
-            }
-        }
+    // 获取实际显示尺寸（考虑缩放）
+    var actualSize: CGSize {
+        return CGSize(width: size.width * xScale, height: size.height * yScale)
+    }
+    
+    // 获取宽度的一半（常用于边界计算）
+    var halfWidth: CGFloat {
+        return (size.width * xScale) / 2
+    }
+    
+    // 获取高度的一半
+    var halfHeight: CGFloat {
+        return (size.height * yScale) / 2
     }
     
     // 初始化
-    init(texture: SKTexture?, color: UIColor = .white, isHead: Bool = false) {
+    init(texture: SKTexture?, color: UIColor = .white) {
         self.customColor = color
         super.init(texture: texture, color: .white, size: texture?.size() ?? .zero)
         setupShader()
         updateColor()
-        if isHead {
-            createGlow()
-        }
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -81,61 +78,29 @@ class ColoredSpriteNode: SKSpriteNode {
     func setColorFromServer(r: Float, g: Float, b: Float, a: Float = 1.0) {
         customColor = UIColor(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: CGFloat(a))
     }
-
-    func setAlphaFrom(playerTimesDict: [String: CGFloat], totallyTransparent: Bool) {
-        // 从玩家数据中获取当前alpha值
-        let invisibleFactor = self.invisibleFactor ?? 10
-        if 0 < playerTimesDict["显形"] <= effectTimesDict["显形"] {
-            alpha = min(1, 1 - playerTimesDict["显形"] / effectTimesDict["显形"])
-        } else if playerTimesDict["隐身"] > effectTimesDict["隐身"] / invisibleFactor {
-            enemyAlpha = max(0, 1 - (effectTimesDict["隐身"] - playerTimesDict["隐身"]) * invisibleFactor / effectTimesDict["隐身"])
-            alpha = !totallyTransparent && enemyAlpha < 0.2? 0.2 : else enemyAlpha
-        } else:
-            enemyAlpha = min(1, 1 - playerTimesDict["隐身"] / effectTimesDict["隐身"] * invisibleFactor)
-            alpha = !totallyTransparent && enemyAlpha < 0.2? 0.2 : else enemyAlpha
-        self.alpha = alpha
-    }
-
-    func createGlow() {
-        let glowNode = SKNode()
-        glowNode.name = "glow"
-        // 创建多层光晕
-        let width = self.size.width
-        let sizes: [CGFloat] = [width + 120, width + 60, width + 30]
-        let alphas: [CGFloat] = [0.3, 0.2, 0.1]
-        for i in 0..<sizes.count {
-            let circle = SKShapeNode(circleOfRadius: sizes[i]/2)
-            circle.name = "circle\(i)"
-            circle.fillColor = .clear
-            circle.strokeColor = .clear
-            circle.alpha = alphas[i]
-            circle.blendMode = .add
-            glowNode.addChild(circle)
+    
+    func glow(playerTimesDict: [String: CGFloat]) {
+        guard let glowNode = childNode(withName: "glow") as? SKShapeNode else {
+            let glowNode = SKShapeNode(circleOfRadius: halfWidth)
+            glowNode.name = "glow"
+            glowNode.glowWidth = halfWidth
+            glowNode.isHidden = true
+            self.addChild(glowNode)
+            return
         }
-        glowNode.isHidden = true
-        self.addChild(glowNode)
-    }
-
-    func updateGlow(playerTimesDict: [String: CGFloat]) {
-        guard let glowNode = childNode(withName: "glow") as? SKNode else { return }
-        var color = customColor
-        let complementaryColor = SKColor(red: 1.0 - color.red, green: 1.0 - color.green, blue: 1.0 - blue, alpha: color.alpha)
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        customColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        let complementaryColor = SKColor(red: 1.0 - red, green: 1.0 - green, blue: 1.0 - blue, alpha: 0.5)
+        let transparentWhite = SKColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 0.5)
         if let powerTime = playerTimesDict["无敌"], let fieldTime = playerTimesDict["力场"] {
             if powerTime > 0 {
                 glowNode.isHidden = false
-                color = complementaryColor
+                glowNode.strokeColor = complementaryColor
             } else if fieldTime > 0 {
                 glowNode.isHidden = false
-                color = .white
+                glowNode.strokeColor = transparentWhite
             } else {
                 glowNode.isHidden = true
-            }
-        }
-        let alphas: [CGFloat] = [0.3, 0.2, 0.1]
-        for i in 0..<alphas.count {
-            if let circle = glowNode.childNode(withName: "circle\(i)") as? SKSpriteNode {
-                circle.fillColor = color
-                circle.alpha = alphas[i]
             }
         }
     }
