@@ -597,7 +597,6 @@ class GameScene: SKScene {
                 snakeBodyNode.isHidden = false
                 let alpha: CGFloat = getAlphaFrom(playerTimesDict: playerTimesDict, totallyTransparent: id != myPlayerId)
                 snakeBodyNode.alpha = alpha
-                print("snakeBodyNode.alpha = \(snakeBodyNode.alpha)")
             } else {
                 let snakeBodyNode = ColoredSpriteNode(texture: snakeBodyTexture)
                 snakeBodyNode.setColorFromServer(color: color)
