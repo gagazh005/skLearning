@@ -30,7 +30,7 @@ class CooldownTimerNode: SKNode {
         backgroundCircle.lineWidth = 3
         addChild(backgroundCircle)
         
-        // 进度圆（蓝色）
+        // 进度圆（灰色）
         progressCircle = SKShapeNode(circleOfRadius: radius)
         progressCircle.fillColor = .gray
         backgroundCircle.alpha = 0.1
@@ -47,7 +47,7 @@ class CooldownTimerNode: SKNode {
         cropNode.maskNode = maskNode
         addChild(cropNode)
 
-        // 名称标签
+        // 名称标签（白色）
         nameLabel = SKLabelNode(text: name)
         nameLabel.position = CGPoint(x: 0, y: -radius / 2)
         nameLabel.fontColor = .white

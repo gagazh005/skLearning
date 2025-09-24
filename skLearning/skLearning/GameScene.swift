@@ -13,8 +13,8 @@ class GameScene: SKScene {
     private let serverPort: Int32 = 5555
     private var connected = false
     
-    // 服务器定义的边界（根据你的Python服务器代码）
-    var serverBounds = CGRect(x: 0, y: 0, width: 40, height: 30) // 根据你的服务器调整
+    // 服务器定义的边界（根据Python服务器数据调整）
+    var serverBounds = CGRect(x: 0, y: 0, width: 40, height: 30) 
         
     // 客户端显示边界（会根据设备自动计算）
     var displayBounds: CGRect = .zero
@@ -33,9 +33,11 @@ class GameScene: SKScene {
     let updateInterval: TimeInterval = 0.1
     var currentMovement = CGVector(dx: 0,dy: 0)
     var foodTypes: [String: [String: Any]]?
+    var effectTimesDict: [String: CGFloat] = [ : ]
     var foodTextures: [SKTexture] = []
     var snakeHeadTexture: SKTexture = SKTexture(imageNamed: "snakeHead")
     var snakeBodyTexture: SKTexture = SKTexture(imageNamed: "snakeBody")
+    var invisibleFactor: CGFloat?
     
     // MARK: - 设定背景和UI元素
     var statusLabel: SKLabelNode!
@@ -309,7 +311,7 @@ class GameScene: SKScene {
             guard let cooldownTimer = effectCooldownTimersDict[effect], let effect_time = foodDetail["effect_time"] as? Double else { return }
             cooldownTimer.duration = effect_time
             cooldownTimer.startCooldown()
-            cooldownTimer.isHidden = false        
+            cooldownTimer.isHidden = false
         case "crash":
             // pygame.mixer.music.pause()
             // self.death_sound.play()
@@ -331,10 +333,11 @@ class GameScene: SKScene {
         setupGameBorder()
         adjustUIPosition()
         
-        // self.invisible_factor = game_config["invisible_factor"]
-        
+        invisibleFactor = gameConfig["invisible_factor"] as? TimeInterval
         foodTypes = gameConfig["food_types"] as? [String: [String: Any]]
         guard let effectNamesArray = foodTypes?.compactMap({ $1.keys.contains("effect_time") ? $1["effect"] : nil }) as? [String] else { return }
+        guard let effectTimesArray = foodTypes?.compactMap({ $1.keys.contains("effect_time") ? $1["effect_time"] : nil }) as? [TimeInterval] else { return }
+        effectTimesDict = Dictionary(uniqueKeysWithValues: zip(effectNamesArray, effectTimesArray))
         effectCooldownTimersDict = createCooldownTimers(nameArray: effectNamesArray)
     }
 
@@ -342,7 +345,6 @@ class GameScene: SKScene {
         // 创建冷却计时器组
         let cooldownTimers = Dictionary(uniqueKeysWithValues: nameArray.indices.map {
             let cooldownTimer = CooldownTimerNode()
-            cooldownTimer.duration = 0
             cooldownTimer.isHidden = true
             let xPos = size.width - 10 - cooldownTimer.radius - (10 + 2 * cooldownTimer.radius) * CGFloat($0)
             let yPos = 10 + cooldownTimer.radius
@@ -519,7 +521,7 @@ class GameScene: SKScene {
         for body in snakeArray {
             let x = body[0]
             let y = body[1]
-            let snakeBodyNode = isHead ? ColoredSpriteNode(texture: snakeHeadTexture) : ColoredSpriteNode(texture: snakeBodyTexture)
+            let snakeBodyNode = isHead ? ColoredSpriteNode(texture: snakeHeadTexture, isHead: true) : ColoredSpriteNode(texture: snakeBodyTexture)
             snakeBodyNode.setColorFromServer(color: color)
             snakeBodyNode.size = CGSize(width: headRatio * playerSize, height: headRatio * playerSize)
             isHead = false
@@ -546,7 +548,11 @@ class GameScene: SKScene {
     
     func updatePlayerPosition(id: String, playerData:[String: Any]) {
         guard let player = players[id] else { return }
-        guard let snakeArray = playerData["snake"] as? [[CGFloat]], let colorArray = playerData["color"] as? [Int], colorArray.count == 3, let headRatio = playerData["head_ratio"] as? CGFloat, let direction = playerData["direction"] as? [CGFloat] else { return }
+        guard let snakeArray = playerData["snake"] as? [[CGFloat]], 
+            let colorArray = playerData["color"] as? [Int], colorArray.count == 3, 
+            let headRatio = playerData["head_ratio"] as? CGFloat, 
+            let direction = playerData["direction"] as? [CGFloat],
+            let playerTimesDict = playerData["effect_times"] as? [String: CGFloat] else { return }
         let color = SKColor(red: CGFloat(colorArray[0])/255.0,
                           green: CGFloat(colorArray[1])/255.0,
                           blue: CGFloat(colorArray[2])/255.0,
@@ -575,7 +581,7 @@ class GameScene: SKScene {
                     startPoint = screenPosition
                 }
                 // 重用蛇身节点
-                guard let snakeBodyNode = player.snakeNode.children[index] as? SKSpriteNode else { return }
+                guard let snakeBodyNode = player.snakeNode.children[index] as? ColoredSpriteNode else { return }
                 let ratio = snakeArray.count > 1 ? pow(Double(headRatio), 1 - Double(index) / Double(snakeArray.count - 1)) : headRatio
                 let scaleAction = SKAction.scale(to: CGSize(width: ratio * playerSize, height: ratio * playerSize), duration: 1)
                 let moveAction = SKAction.move(to: screenPosition, duration: updateInterval)
@@ -585,8 +591,10 @@ class GameScene: SKScene {
                     // 按照服务器direction数据旋转蛇头
                     let angle = atan2(direction[1], direction[0])
                     snakeBodyNode.zRotation = angle
+                    snakeBodyNode.updateGlow(playerTimesDict: playerTimesDict)
                 }
                 snakeBodyNode.zPosition = 100 - CGFloat(index) / CGFloat(snakeArray.count)
+                snakeBodyNode.setAlphaFrom(playerTimesDict: playerTimesDict, totallyTransparent: id != myPlayerId)
                 snakeBodyNode.isHidden = false
             } else {
                 let snakeBodyNode = ColoredSpriteNode(texture: snakeBodyTexture)
@@ -629,16 +637,7 @@ class GameScene: SKScene {
             guard let foodPos = food[1] as? [CGFloat] else { return }
             let x = foodPos[0]
             let y = foodPos[1]
-            /*
-            let (red, green, blue) = foodColors[foodName] ?? (0, 0, 0)
-            let color = SKColor(red: CGFloat(red)/255.0,
-                              green: CGFloat(green)/255.0,
-                              blue: CGFloat(blue)/255.0,
-                              alpha: 1.0)
-             */
-            //food_img = self.food_img_list[self.food_types[food_name]["img_index"]]
             guard let foodNode = allFoodNode.children[index] as? SKSpriteNode else { return }
-            // foodNode.color = color
             guard let index = foodTypes?[foodName]?["img_index"] as? Int else { return }
             foodNode.texture = foodTextures[index]
             foodNode.size = CGSize(width: foodSize, height: foodSize)
