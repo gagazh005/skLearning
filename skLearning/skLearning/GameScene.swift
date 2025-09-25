@@ -360,7 +360,6 @@ class GameScene: SKScene {
             label.text = "断开连接"
         } else {
             sendCommandToServer("quit_game")
-            didDisconnectFromServer()
             guard let label = connectButton.childNode(withName: "connectButtonLabel") as? SKLabelNode else { return }
             label.text = "连接"
         }
@@ -438,6 +437,7 @@ class GameScene: SKScene {
         case "game_over":
             message = "游戏结束！"
         case "quit_game":
+            print("quit_game by player")
             message = "退出游戏"
             backgroundMusic?.stop()
         case "reborn":
@@ -756,11 +756,9 @@ class GameScene: SKScene {
 
     
     func removePlayer(id: String) {
+        players[id]?.removeAllChildren()
         players[id]?.removeFromParent()
         players.removeValue(forKey: id)
-        if let idLabel = childNode(withName: "玩家\(id)的标签") as? SKLabelNode {
-            idLabel.removeFromParent()
-        }
     }
     
     // MARK: 食物管理
@@ -858,6 +856,7 @@ extension GameScene: GameSocketManagerDelegate {
         for (id, _) in players {
             removePlayer(id: id)
         }
+        ranking.removeFromParent()
         myPlayerId = nil
     }
     
