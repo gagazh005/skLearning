@@ -7,8 +7,8 @@ class GameScene: SKScene {
     private var activeTouches: [UITouch] = []
     private var previousAngle: CGFloat = 0
     private var previousDistance: CGFloat = 0
-    var gestureNode: SKNode?
-    private let rotationThreshold: CGFloat = 30.0.toRadians
+    var gestureNode: SKNode = SKNode()
+    private let rotationThreshold: CGFloat = 30 / 180 * .pi
     private let scaleThreshold: CGFloat = 0.5
     private var currentLine: SKShapeNode?  // 当前绘制的直线
     private var currentCircle: SKShapeNode?  // 当前绘制的圆圈
@@ -88,7 +88,7 @@ class GameScene: SKScene {
 
     func setupAudio() {
         // 预加载音效
-        if let musicURL = Bundle.main.url(forResource: "background", withExtension: "ogg"),
+        if let musicURL = Bundle.main.url(forResource: "background", withExtension: "mp3"),
            let eatURL = Bundle.main.url(forResource: "eat_sound", withExtension: "mp3"),
            let deathURL = Bundle.main.url(forResource: "death_sound", withExtension: "mp3") {
             do {
@@ -98,7 +98,7 @@ class GameScene: SKScene {
                 backgroundMusic?.prepareToPlay()
                 eatSound = try AVAudioPlayer(contentsOf: eatURL)
                 eatSound?.prepareToPlay() 
-                deathSound = try AVAudioPlayer(contentsOf: eatURL)
+                deathSound = try AVAudioPlayer(contentsOf: deathURL)
                 deathSound?.prepareToPlay()
             } catch {
                 print("无法加载音效")
@@ -176,9 +176,9 @@ class GameScene: SKScene {
         statusLabel.fontSize = 16
         addChild(statusLabel)
         
-        // 玩家ID标签 - 添加在左上角
+        // 玩家ID标签 - 添加在右下角
         playerIdLabel = SKLabelNode(text: "|ID: 未连接")
-        playerIdLabel.position = CGPoint(x: 100, y: frame.height - 40) // 左上角位置
+        playerIdLabel.position = CGPoint(x: frame.width - 200, y: 40) // 左上角位置
         playerIdLabel.fontColor = .white
         playerIdLabel.fontName = "PingFangSC-Semibold"
         playerIdLabel.fontSize = 15
@@ -189,7 +189,7 @@ class GameScene: SKScene {
 
         // 玩家数量标签
         playersCountLabel = SKLabelNode(text: "玩家: 0")
-        playersCountLabel.position = CGPoint(x: 30, y: frame.height - 40)
+        playersCountLabel.position = CGPoint(x: frame.width - 50, y: 40)
         playersCountLabel.fontColor = .white
         playersCountLabel.fontName = "PingFangSC-Semibold"
         playersCountLabel.fontSize = 15
@@ -295,7 +295,7 @@ class GameScene: SKScene {
 
     // MARK： - 多点触控方法
     private func startMultiTouchGesture() {
-        guard activeTouches.count >= 2, let node = gestureNode else { return }
+        guard activeTouches.count >= 2 else { return }
         
         let touch1 = activeTouches[0]
         let touch2 = activeTouches[1]
@@ -308,7 +308,7 @@ class GameScene: SKScene {
     }
     
     private func handleMultiTouchGesture() {
-        guard activeTouches.count == 2, let node = gestureNode else { return }
+        guard activeTouches.count == 2 else { return }
         
         let touch1 = activeTouches[0]
         let touch2 = activeTouches[1]
@@ -319,29 +319,28 @@ class GameScene: SKScene {
         // 处理旋转
         let currentAngle = angleBetween(loc1, loc2)
         let angleDelta = currentAngle - previousAngle
-        node.zRotation += angleDelta
+        gestureNode.zRotation += angleDelta
         previousAngle = currentAngle
         
         // 处理缩放
         let currentDistance = distanceBetween(loc1, loc2)
         let scaleDelta = currentDistance / previousDistance
-        node.xScale *= scaleDelta
-        node.yScale *= scaleDelta
+        gestureNode.xScale *= scaleDelta
+        gestureNode.yScale *= scaleDelta
         previousDistance = currentDistance
-        if node.zRotation > rotationThreshold {
+        if gestureNode.zRotation > rotationThreshold {
             processRotation()
-        } else if node.yScale < ScaleThreshold {
+        } else if gestureNode.yScale < scaleThreshold {
             processYScale()
-        } else if node.xScale < ScaleThreshold {
+        } else if gestureNode.xScale < scaleThreshold {
             processXScale()
         }
     }
     
     private func endMultiTouchGesture() {
-        guard node = gestureNode else { return }
-        node.zRotation = 0
-        node.xScale = 1.0
-        node.yScale = 1.0
+        gestureNode.zRotation = 0
+        gestureNode.xScale = 1.0
+        gestureNode.yScale = 1.0
     }
     
     private func angleBetween(_ point1: CGPoint, _ point2: CGPoint) -> CGFloat {
@@ -357,12 +356,13 @@ class GameScene: SKScene {
     func processConnect() {
         if !connected {
             connectToServer()
-            sendUsernameToServer()
-            connectButton.childNode(withName: "connectButtonLabel")?.text = "断开连接"
+            guard let label = connectButton.childNode(withName: "connectButtonLabel") as? SKLabelNode else { return }
+            label.text = "断开连接"
         } else {
             sendCommandToServer("quit_game")
             didDisconnectFromServer()
-            connectButton.childNode(withName: "connectButtonLabel")?.text = "连接"
+            guard let label = connectButton.childNode(withName: "connectButtonLabel") as? SKLabelNode else { return }
+            label.text = "连接"
         }
     }
 
@@ -411,7 +411,7 @@ class GameScene: SKScene {
         }
         // 处理游戏状态更新
         if currentTime - lastUpdateTime >= updateInterval {
-            handleGameState(gameState)
+            updateGameState(gameState)
             lastUpdateTime = currentTime
         }
     }
@@ -422,18 +422,18 @@ class GameScene: SKScene {
         var message = ""
         switch gameEvent {
         case "join_game":
+            sendUsernameToServer()
             guard let content = content as? [String: Any] else { return }
-            if let gameConfig = content["game_config"] as? [String : Any] {
-                loadConfig(gameConfig)
-                guard let playerId = content["player_id"] as? Int else { return }
-                myPlayerId = String(playerId)
-                playerIdLabel.text = "ID: \(playerId)"
-                addChild(ranking)
-                message = "加入服务器端成功"
-                gamePaused = data["game_paused"] as? Bool ?? false
-                if gamePaused {
-                    message = "游戏暂停中"
-                }
+            guard let gameConfig = content["game_config"] as? [String : Any] else { return }
+            loadConfig(gameConfig)
+            guard let playerId = content["player_id"] as? Int else { return }
+            myPlayerId = String(playerId)
+            playerIdLabel.text = "ID: \(playerId)"
+            addChild(ranking)
+            message = "加入服务器端成功"
+            gamePaused = data["game_paused"] as? Bool ?? false
+            if gamePaused {
+                message = "游戏暂停中"
             }
         case "game_over":
             message = "游戏结束！"
@@ -449,7 +449,7 @@ class GameScene: SKScene {
             if gamePaused {
                 message = "玩家\(playerId):\(name)暂停游戏,还剩\(pauseCount)次"
             } else {
-                message = "玩家\(player_id):\(name)恢复游戏"
+                message = "玩家\(playerId):\(name)恢复游戏"
             }
         case "eating_food":
             eatSound?.play()
@@ -507,7 +507,7 @@ class GameScene: SKScene {
     }
 
 
-    private func handleGameState(_ data: [String : Any]) {
+    private func updateGameState(_ data: [String : Any]) {
         guard let playersData = data["players"] as? [String: Any] else { return }
         if let foodArray = data["food_list"] as? [[Any]] {
             if allFood.children.isEmpty {
@@ -524,9 +524,7 @@ class GameScene: SKScene {
         // 更新现有玩家位置
         for (id, playerData) in playersData {
             guard let playerData = playerData as? [String: Any] else { return }
-            if players[id] != nil {
-                updatePlayer(id: id, playerData: playerData)
-            }
+            updatePlayer(id: id, playerData: playerData)
         }
         playersCountLabel.text = "玩家: \(players.count)"
         
@@ -591,8 +589,8 @@ class GameScene: SKScene {
         guard let _ = statusLabel else { return }
         // 将UI元素移到边界内
         statusLabel.position = CGPoint(x: size.width / 2, y: size.height - 40)
-        playersCountLabel.position = CGPoint(x: 30, y: size.height - 40)
-        playerIdLabel.position = CGPoint(x: 100, y: size.height - 40)
+        playersCountLabel.position = CGPoint(x: size.width - 100, y: 40)
+        playerIdLabel.position = CGPoint(x: size.width - 200, y: 40)
         connectButton.position = CGPoint(x: size.width - 60, y: size.height - 40)
     }
     
@@ -660,7 +658,8 @@ class GameScene: SKScene {
     // MARK: - 玩家管理
     func updatePlayer(id: String, playerData:[String: Any]) {
         guard let player = players[id] else {
-            let player = SKNode(name: id)
+            let player = SKNode()
+            player.name = id
             players[id] = player
             let idLabel = SKLabelNode(text: "玩家\(id)")
             idLabel.name = "玩家\(id)的标签"
@@ -799,9 +798,9 @@ class GameScene: SKScene {
     
     // MARK: 排行榜管理
     func updateRanking(playersData: [String : Any]) {
-        onlinePlayerId = playersData.keys
+        let onlinePlayersId = playersData.keys
         ranking.children.forEach { $0.isHidden = true }
-        ranking.children.filter { onlinePlayerId.contains($0.name) }.forEach { $0.isHidden = false}
+        ranking.children.filter { onlinePlayersId.contains($0.name ?? "错误") }.forEach { $0.isHidden = false}
         for (id, playerData) in playersData {
             guard let playerData = playerData as? [String: Any] else { return }
             guard let playerRanking = playerData["ranking"] as? Int,
@@ -818,15 +817,16 @@ class GameScene: SKScene {
             let text = "\(prefix)\(id)：\(name)(HP=\(hp))\(score)分 - \(status) \(liveTime)秒"
             if let rankLabel = ranking.childNode(withName: id) as? SKLabelNode {
                 rankLabel.text = text
-                moveAction = SKAction.move(to: CGPoint(x: 20, y: frame.height - 40 * CGFloat(playerRanking)), duration: 1)
+                let moveAction = SKAction.move(to: CGPoint(x: 20, y: frame.height - 20 * CGFloat(playerRanking + 1)), duration: 1)
                 rankLabel.run(moveAction)
             } else {
-                rankLabel = SKLabelNode()
+                let rankLabel = SKLabelNode()
                 rankLabel.fontColor = color
                 rankLabel.fontName = "PingFangSC-Semibold"
                 rankLabel.fontSize = 15
+                rankLabel.horizontalAlignmentMode = .left // 左对齐
                 rankLabel.zPosition = 110  // 最上层
-                rankLabel.name = "排名标签\(id)"
+                rankLabel.name = id
                 ranking.addChild(rankLabel)
             }
         } 
