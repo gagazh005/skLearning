@@ -563,10 +563,7 @@ class GameScene: SKScene {
             let direction = playerData["direction"] as? [CGFloat],
             let playerTimesDict = playerData["effect_times"] as? [String: CGFloat],
             let name = playerData["name"] as? String else { return }
-        let color = SKColor(red: CGFloat(colorArray[0])/255.0,
-                          green: CGFloat(colorArray[1])/255.0,
-                          blue: CGFloat(colorArray[2])/255.0,
-                          alpha: 1.0)
+        let color = colorFromServer(colorArray)
         let playerAlpha: CGFloat = getAlphaFrom(playerTimesDict: playerTimesDict, totallyTransparent: id != myPlayerId)
         let playerSize = serverToScreenDistance(1) // 假设服务器端玩家大小为1
         let headX = snakeArray.first?[0] ?? -10
@@ -693,11 +690,13 @@ class GameScene: SKScene {
         for (id, playerData) in playersData {
             guard let playerData = playerData as? [String: Any] else { return }
             guard let playerRanking = playerData["ranking"] as? Int,
+                  let colorArray = playerData["color"] as? [Int], colorArray.count == 3, 
                   var liveTime = playerData["live_time"] as? Double,
                   let alive = playerData["alive"] as? Bool,
                   let hp = playerData["hp"] as? Int,
                   let score = playerData["score"] as? Int,
                   let name = playerData["name"] as? String else { return }
+            let color = colorFromServer(colorArray)
             let status = alive ? "存活" : "死亡"
             liveTime = round(liveTime * 10) / 10
             let prefix = id == myPlayerId ? "->" : ""
@@ -708,7 +707,7 @@ class GameScene: SKScene {
                 rankLabel.run(moveAction)
             } else {
                 rankLabel = SKLabelNode()
-                rankLabel.fontColor = .white
+                rankLabel.fontColor = color
                 rankLabel.fontName = "PingFangSC-Semibold"
                 rankLabel.fontSize = 15
                 rankLabel.zPosition = 110  // 最上层
@@ -717,6 +716,15 @@ class GameScene: SKScene {
             }
         } 
     }
+
+    // MARK： - 辅助方法
+    private func colorFromServer(_ colorArray: [Int]) -> SKColor {
+        SKColor(red: CGFloat(colorArray[0])/255.0,
+                green: CGFloat(colorArray[1])/255.0,
+                blue: CGFloat(colorArray[2])/255.0,
+                alpha: 1.0)
+    }
+    
 }
 
 // MARK: - 网络管理器代理
