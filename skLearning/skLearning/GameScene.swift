@@ -229,31 +229,23 @@ class GameScene: SKScene {
         
         for node in nodes {
             if node.name == "connectButton" || node.parent?.name == "connectButton" {
-                if !connected {
-                    connectToServer()
-                    sendUsernameToServer()
-                    guard let LabelNode = connectButton.childNode(withName: "connectButtonLabel") as? SKLabelNode else { return }
-                    LabelNode.text = "断开连接"
-                } else {
-                    sendCommandToServer("quit_game")
-                    didDisconnectFromServer()
-                    guard let LabelNode = connectButton.childNode(withName: "connectButtonLabel") as? SKLabelNode else { return }
-                    LabelNode.text = "连接"
-                }
+                processConnect()
                 return
             }
         }
         
-        // 创建新的圆圈
-        currentCircle = createCircle(at: location)
-        currentCircle.map { addChild($0) }
-        
-        // 创建新的直线
-        currentLine = createLine(from: startPoint, to: location)
-        currentLine.map { addChild($0) }
-        
-        // 蛇头朝向触摸点
-        towards(to: location)
+        if connected {
+            // 创建新的圆圈
+            currentCircle = createCircle(at: location)
+            currentCircle.map { addChild($0) }
+            
+            // 创建新的直线
+            currentLine = createLine(from: startPoint, to: location)
+            currentLine.map { addChild($0) }
+            
+            // 蛇头朝向触摸点
+            towards(to: location)
+        }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -360,6 +352,18 @@ class GameScene: SKScene {
         let dx = point2.x - point1.x
         let dy = point2.y - point1.y
         return sqrt(dx*dx + dy*dy)
+    }
+
+    func processConnect() {
+        if !connected {
+            connectToServer()
+            sendUsernameToServer()
+            connectButton.childNode(withName: "connectButtonLabel")?.text = "断开连接"
+        } else {
+            sendCommandToServer("quit_game")
+            didDisconnectFromServer()
+            connectButton.childNode(withName: "connectButtonLabel")?.text = "连接"
+        }
     }
 
     func processRotation() {
@@ -850,14 +854,11 @@ extension GameScene: GameSocketManagerDelegate {
         statusLabel.text = "连接断开"
         statusLabel.fontColor = .red
         connected = false
-        
         // 清理所有玩家
         for (id, _) in players {
             removePlayer(id: id)
         }
         myPlayerId = nil
-        
-        print("与服务器断开连接")
     }
     
     func didReceiveData(_ data: [String: Any]) {
