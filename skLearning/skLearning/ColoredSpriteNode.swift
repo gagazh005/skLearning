@@ -94,12 +94,3 @@ class ColoredSpriteNode: SKSpriteNode {
     }
 }
 
-// MARK: - 玩家类
-class Player {
-    let playerId: String
-    let snakeNode: SKNode
-    init(id: String) {
-        self.playerId = id
-        self.snakeNode = SKNode()
-    }
-}
