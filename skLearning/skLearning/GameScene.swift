@@ -3,6 +3,13 @@ import Foundation
 import AVFoundation
 
 class GameScene: SKScene {
+    // MARK: - 触控相关属性
+    private var activeTouches: [UITouch] = []
+    private var previousAngle: CGFloat = 0
+    private var previousDistance: CGFloat = 0
+    var gestureNode: SKNode?
+    private let rotationThreshold: CGFloat = 30.0.toRadians
+    private let scaleThreshold: CGFloat = 0.5
     private var currentLine: SKShapeNode?  // 当前绘制的直线
     private var currentCircle: SKShapeNode?  // 当前绘制的圆圈
     private var joyStick: JoyStick!
@@ -205,6 +212,13 @@ class GameScene: SKScene {
     
     // MARK: - 捕捉摇杆和触屏输入信号
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+        for touch in touches {
+            activeTouches.append(touch)
+        }
+        if activeTouches.count >= 2 {
+            startMultiTouchGesture()
+        }
         guard let touch = touches.first, let startPoint = startPoint else { return }
         if let _ = currentCircle, let _ = currentLine { return }
         let location = touch.location(in: self)
@@ -221,7 +235,7 @@ class GameScene: SKScene {
                     guard let LabelNode = connectButton.childNode(withName: "connectButtonLabel") as? SKLabelNode else { return }
                     LabelNode.text = "断开连接"
                 } else {
-                    sendQuitGameToServer()
+                    sendCommandToServer("quit_game")
                     didDisconnectFromServer()
                     guard let LabelNode = connectButton.childNode(withName: "connectButtonLabel") as? SKLabelNode else { return }
                     LabelNode.text = "连接"
@@ -243,6 +257,10 @@ class GameScene: SKScene {
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesMoved(touches, with: event)
+        if activeTouches.count == 2 {
+            handleMultiTouchGesture()
+        }
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
         
@@ -254,16 +272,109 @@ class GameScene: SKScene {
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesEnded(touches, with: event)
+        for touch in touches {
+            if let index = activeTouches.firstIndex(of: touch) {
+                activeTouches.remove(at: index)
+            }
+        }
+        if activeTouches.count < 2 {
+            endMultiTouchGesture()
+        }
         // 触摸结束时移除直线和圆圈
         removeLine()
         removeCircle()
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesEnded(touches, with: event)
+        for touch in touches {
+            if let index = activeTouches.firstIndex(of: touch) {
+                activeTouches.remove(at: index)
+            }
+        }
+        if activeTouches.count < 2 {
+            endMultiTouchGesture()
+        }
         // 触摸取消时移除直线和圆圈
         removeLine()
         removeCircle()
     }
+
+    // MARK： - 多点触控方法
+    private func startMultiTouchGesture() {
+        guard activeTouches.count >= 2, let node = gestureNode else { return }
+        
+        let touch1 = activeTouches[0]
+        let touch2 = activeTouches[1]
+        
+        let loc1 = touch1.location(in: self)
+        let loc2 = touch2.location(in: self)
+        
+        previousAngle = angleBetween(loc1, loc2)
+        previousDistance = distanceBetween(loc1, loc2)
+    }
+    
+    private func handleMultiTouchGesture() {
+        guard activeTouches.count == 2, let node = gestureNode else { return }
+        
+        let touch1 = activeTouches[0]
+        let touch2 = activeTouches[1]
+        
+        let loc1 = touch1.location(in: self)
+        let loc2 = touch2.location(in: self)
+        
+        // 处理旋转
+        let currentAngle = angleBetween(loc1, loc2)
+        let angleDelta = currentAngle - previousAngle
+        node.zRotation += angleDelta
+        previousAngle = currentAngle
+        
+        // 处理缩放
+        let currentDistance = distanceBetween(loc1, loc2)
+        let scaleDelta = currentDistance / previousDistance
+        node.xScale *= scaleDelta
+        node.yScale *= scaleDelta
+        previousDistance = currentDistance
+        if node.zRotation > rotationThreshold {
+            processRotation()
+        } else if node.yScale < ScaleThreshold {
+            processYScale()
+        } else if node.xScale < ScaleThreshold {
+            processXScale()
+        }
+    }
+    
+    private func endMultiTouchGesture() {
+        guard node = gestureNode else { return }
+        node.zRotation = 0
+        node.xScale = 1.0
+        node.yScale = 1.0
+    }
+    
+    private func angleBetween(_ point1: CGPoint, _ point2: CGPoint) -> CGFloat {
+        return atan2(point2.y - point1.y, point2.x - point1.x)
+    }
+    
+    private func distanceBetween(_ point1: CGPoint, _ point2: CGPoint) -> CGFloat {
+        let dx = point2.x - point1.x
+        let dy = point2.y - point1.y
+        return sqrt(dx*dx + dy*dy)
+    }
+
+    func processRotation() {
+        sendCommandToServer("reborn")
+    }
+
+    func processYScale() {
+        sendCommandToServer("pause_game")
+    }
+
+    func processXScale() {
+        sendCommandToServer("quit_game")
+    }
+
+    // MARK: - 摇杆方法
     
     private func setupJoyStick() {
         joyStick = JoyStick()
@@ -436,11 +547,11 @@ class GameScene: SKScene {
         socketManager.sendData(movementData)
     }
     
-    private func sendQuitGameToServer() {
-        let quitGameData: [String: String] = [
-            "type": "quit_game"
+    private func sendCommandToServer(_ command: String) {
+        let commandData: [String: String] = [
+            "type": command
         ]
-        socketManager.sendData(quitGameData)
+        socketManager.sendData(commandData)
     }
     
     func setupNetwork() {
