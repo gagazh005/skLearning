@@ -697,10 +697,10 @@ class GameScene: SKScene {
                   let alive = playerData["alive"] as? Bool,
                   let hp = playerData["hp"] as? Int,
                   let score = playerData["score"] as? Int,
-                  let name = playerData['name'] as? String else { return }
+                  let name = playerData["name"] as? String else { return }
             let status = alive ? "存活" : "死亡"
             liveTime = round(liveTime * 10) / 10
-            let prefix = id == myPlayerId "->" : ""
+            let prefix = id == myPlayerId ? "->" : ""
             let text = "\(prefix)\(id)：\(name)(HP=\(hp))\(score)分 - \(status) \(liveTime)秒"
             if let rankLabel = ranking.childNode(withName: id) as? SKLabelNode {
                 rankLabel.text = text
