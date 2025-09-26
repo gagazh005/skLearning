@@ -1,15 +1,11 @@
-//
-//  GameViewController.swift
-//  skLearning
-//
-//  Created by 张欢 on 2025/9/14.
-//
-
+// 修改后的 GameViewController.swift
 import UIKit
 import SpriteKit
 import GameplayKit
 
 class GameViewController: UIViewController {
+    
+    private var hasShownLogin = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -19,16 +15,38 @@ class GameViewController: UIViewController {
         let screenSize = screen.bounds.size
         let scale = screen.scale
         let resolution = CGSize(width: screenSize.width * scale, height: screenSize.height * scale)
-        //let fixedSize = CGSize(width: 800, height: 600)
-
+        
         print("屏幕尺寸（点）：\(screenSize.width) x \(screenSize.height)")
         print("屏幕缩放比例：\(scale)")
         print("屏幕分辨率（像素）：\(resolution.width) x \(resolution.height)")
         
+        // 先显示登录界面
+        showLoginViewController()
+    }
+    
+    private func showLoginViewController() {
+        let loginVC = LoginViewController()
+        loginVC.modalPresentationStyle = .fullScreen
+        
+        // 设置登录成功回调
+        loginVC.onLoginSuccess = { [weak self] in
+            self?.startGame()
+        }
+        
+        present(loginVC, animated: false) {
+            self.hasShownLogin = true
+        }
+    }
+    
+    private func startGame() {
+        let screen = UIScreen.main
+        let screenSize = screen.bounds.size
+        
         if let view = self.view as! SKView? {
-            // 改为直接创建场景实例：
+            // 创建游戏场景
             let scene = GameScene(size: screenSize)
             scene.scaleMode = .resizeFill
+            
             view.presentScene(scene)
             view.ignoresSiblingOrder = true
             view.showsFPS = true
