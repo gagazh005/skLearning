@@ -220,7 +220,6 @@ class GameScene: SKScene {
             startMultiTouchGesture()
         }
         guard let touch = touches.first, let startPoint = startPoint else { return }
-        if let _ = currentCircle, let _ = currentLine { return }
         let location = touch.location(in: self)
         let nodes = self.nodes(at: location)
         
@@ -233,19 +232,10 @@ class GameScene: SKScene {
                 return
             }
         }
-        
-        if connected {
-            // 创建新的圆圈
-            currentCircle = createCircle(at: location)
-            currentCircle.map { addChild($0) }
-            
-            // 创建新的直线
-            currentLine = createLine(from: startPoint, to: location)
-            currentLine.map { addChild($0) }
-            
-            // 蛇头朝向触摸点
-            towards(to: location)
-        }
+        currentCircle?.isHidden = false
+        currentLine?.isHidden = false
+        // 蛇头朝向触摸点
+        towards(to: location)
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -273,9 +263,8 @@ class GameScene: SKScene {
         if activeTouches.count < 2 {
             endMultiTouchGesture()
         }
-        // 触摸结束时移除直线和圆圈
-        removeLine()
-        removeCircle()
+        currentCircle?.isHidden = true
+        currentLine?.isHidden = true
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -288,9 +277,8 @@ class GameScene: SKScene {
         if activeTouches.count < 2 {
             endMultiTouchGesture()
         }
-        // 触摸取消时移除直线和圆圈
-        removeLine()
-        removeCircle()
+        currentCircle?.isHidden = true
+        currentLine?.isHidden = true
     }
 
     // MARK： - 多点触控方法
@@ -846,6 +834,13 @@ extension GameScene: GameSocketManagerDelegate {
         statusLabel.text = "已连接"
         statusLabel.fontColor = .green
         connected = true
+        // 创建新的圆圈
+        currentCircle = createCircle(at: location)
+        currentCircle.map { addChild($0) }
+        
+        // 创建新的直线
+        currentLine = createLine(from: startPoint, to: location)
+        currentLine.map { addChild($0) }
     }
     
     func didDisconnectFromServer() {
@@ -858,6 +853,10 @@ extension GameScene: GameSocketManagerDelegate {
         }
         ranking.removeFromParent()
         myPlayerId = nil
+        
+        // 断开连接时移除直线和圆圈
+        removeLine()
+        removeCircle()
     }
     
     func didReceiveData(_ data: [String: Any]) {
