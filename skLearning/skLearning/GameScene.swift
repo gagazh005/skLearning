@@ -244,6 +244,8 @@ class GameScene: SKScene {
             currentLine = createLine(from: startPoint, to: location)
             currentLine.map { addChild($0) }
         } else {
+            updateLine(to: location)
+            updateCircle(to: location)
             currentCircle?.isHidden = false
             currentLine?.isHidden = false
             // 蛇头朝向触摸点

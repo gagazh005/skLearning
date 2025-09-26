@@ -1,16 +1,30 @@
-// 修改后的 GameViewController.swift
+//
+//  GameViewController.swift
+//  skLearning
+//
+//  Created by 张欢 on 2025/9/14.
+//
+
 import UIKit
 import SpriteKit
 import GameplayKit
 
 class GameViewController: UIViewController {
     
-    private var hasShownLogin = false
+    private var pinchGesture: UIPinchGestureRecognizer!
+    private var skView: SKView!
+
+    override func loadView() {
+        // 手动创建 SKView 作为主视图
+        skView = SKView()
+        self.view = skView
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        // 在 GameViewController.swift 的 viewDidLoad 中添加调试代码
+        print("GameViewController 加载完成")
+        
         let screen = UIScreen.main
         let screenSize = screen.bounds.size
         let scale = screen.scale
@@ -20,38 +34,132 @@ class GameViewController: UIViewController {
         print("屏幕缩放比例：\(scale)")
         print("屏幕分辨率（像素）：\(resolution.width) x \(resolution.height)")
         
-        // 先显示登录界面
-        showLoginViewController()
+        // 现在直接使用 skView，不需要强制转换
+        let scene = GameScene(size: screenSize)
+        scene.scaleMode = .resizeFill
+        
+        skView.presentScene(scene)
+        skView.ignoresSiblingOrder = true
+        skView.showsFPS = true
+        skView.showsNodeCount = true
+        skView.showsDrawCount = true
+        
+        // 添加捏合手势识别器
+        setupPinchGesture()
+        
+        // 添加提示标签（可选，可以在一段时间后隐藏）
+        showHintLabel()
     }
     
-    private func showLoginViewController() {
-        let loginVC = LoginViewController()
-        loginVC.modalPresentationStyle = .fullScreen
-        
-        // 设置登录成功回调
-        loginVC.onLoginSuccess = { [weak self] in
-            self?.startGame()
-        }
-        
-        present(loginVC, animated: false) {
-            self.hasShownLogin = true
-        }
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        print("GameViewController 已显示在窗口层级中")
     }
     
-    private func startGame() {
-        let screen = UIScreen.main
-        let screenSize = screen.bounds.size
+    private func setupPinchGesture() {
+        pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinchGesture(_:)))
+        view.addGestureRecognizer(pinchGesture)
         
-        if let view = self.view as! SKView? {
-            // 创建游戏场景
-            let scene = GameScene(size: screenSize)
-            scene.scaleMode = .resizeFill
+        print("捏合手势已添加")
+    }
+    
+    @objc private func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            // 手势开始，可以添加一些视觉反馈
+            print("捏合手势开始，缩放比例: \(gesture.scale)")
             
-            view.presentScene(scene)
-            view.ignoresSiblingOrder = true
-            view.showsFPS = true
-            view.showsNodeCount = true
-            view.showsDrawCount = true
+        case .changed:
+            // 手势进行中，可以实时显示缩放比例
+            break
+            
+        case .ended, .cancelled:
+            // 手势结束，检查是否满足返回条件
+            checkPinchForReturn(gesture)
+            
+        default:
+            break
+        }
+    }
+    
+    private func checkPinchForReturn(_ gesture: UIPinchGestureRecognizer) {
+        let scale = gesture.scale
+        let velocity = gesture.velocity
+        
+        // 返回条件：缩放比例小于0.5（捏合）且速度较快，或者缩放比例大于2.0（张开）
+        let isPinchIn = scale < 0.5 && velocity < -1.0
+        let isPinchOut = scale > 2.0 && velocity > 1.0
+        
+        if isPinchIn || isPinchOut {
+            print("满足返回条件: 缩放比例=\(scale), 速度=\(velocity)")
+            showReturnConfirmation()
+        } else {
+            print("不满足返回条件: 缩放比例=\(scale), 速度=\(velocity)")
+        }
+    }
+    
+    private func showReturnConfirmation() {
+        // 创建确认弹窗
+        let alert = UIAlertController(
+            title: "返回登录界面",
+            message: "确定要返回登录界面吗？",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "取消", style: .cancel, handler: nil))
+        alert.addAction(UIAlertAction(title: "确定", style: .default, handler: { [weak self] _ in
+            self?.returnToLogin()
+        }))
+        
+        present(alert, animated: true)
+    }
+    
+    private func showHintLabel() {
+        // 添加一个临时提示标签，3秒后自动隐藏
+        let hintLabel = UILabel()
+        hintLabel.text = "双指捏合可返回登录界面"
+        hintLabel.textColor = .white
+        hintLabel.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        hintLabel.textAlignment = .center
+        hintLabel.font = UIFont.systemFont(ofSize: 14)
+        hintLabel.layer.cornerRadius = 8
+        hintLabel.clipsToBounds = true
+        hintLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(hintLabel)
+        
+        NSLayoutConstraint.activate([
+            hintLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            hintLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            hintLabel.heightAnchor.constraint(equalToConstant: 30),
+            hintLabel.widthAnchor.constraint(equalToConstant: 200)
+        ])
+        
+        // 3秒后淡出隐藏
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            UIView.animate(withDuration: 0.5, animations: {
+                hintLabel.alpha = 0
+            }) { _ in
+                hintLabel.removeFromSuperview()
+            }
+        }
+    }
+    
+    private func returnToLogin() {
+        print("返回登录界面")
+        
+        // 清除登录信息
+        UserDefaults.standard.removeObject(forKey: "lastServerIP")
+        UserDefaults.standard.removeObject(forKey: "lastUsername")
+        
+        // 通过 AppDelegate 切换回登录界面
+        if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+            appDelegate.showLoginViewController()
+        } else {
+            // 备用方案：如果 AppDelegate 方法不可用，使用 dismiss
+            dismiss(animated: true) {
+                print("已返回到登录界面")
+            }
         }
     }
 
@@ -64,6 +172,14 @@ class GameViewController: UIViewController {
     }
 
     override var prefersStatusBarHidden: Bool {
+        return true
+    }
+}
+
+// 实现手势识别器代理，允许同时识别其他手势
+extension GameViewController: UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        // 允许捏合手势与其他手势同时识别，不影响游戏操作
         return true
     }
 }
