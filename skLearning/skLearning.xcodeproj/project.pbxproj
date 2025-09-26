@@ -9,6 +9,11 @@
 /* Begin PBXBuildFile section */
 		1919D64B2E802F5D001F5F95 /* ColoredSpriteNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1919D64A2E802F5D001F5F95 /* ColoredSpriteNode.swift */; };
 		19323B3F2E784952008BEB76 /* JoyStick.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19323B3E2E784952008BEB76 /* JoyStick.swift */; };
+		1978272B2E86D01A00E30963 /* LoginViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1978272A2E86D01A00E30963 /* LoginViewController.swift */; };
+		197827302E86D0C500E30963 /* CooldownTimerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1978272C2E86D0C400E30963 /* CooldownTimerNode.swift */; };
+		197827312E86D0C500E30963 /* background.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 1978272D2E86D0C500E30963 /* background.mp3 */; };
+		197827322E86D0C500E30963 /* death_sound.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 1978272E2E86D0C500E30963 /* death_sound.mp3 */; };
+		197827332E86D0C500E30963 /* eat_sound.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 1978272F2E86D0C500E30963 /* eat_sound.mp3 */; };
 		19B04E302E76B01700BE2BFC /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B04E2F2E76B01700BE2BFC /* AppDelegate.swift */; };
 		19B04E362E76B01700BE2BFC /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B04E352E76B01700BE2BFC /* GameScene.swift */; };
 		19B04E382E76B01700BE2BFC /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19B04E372E76B01700BE2BFC /* GameViewController.swift */; };
@@ -21,6 +26,11 @@
 /* Begin PBXFileReference section */
 		1919D64A2E802F5D001F5F95 /* ColoredSpriteNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColoredSpriteNode.swift; sourceTree = "<group>"; };
 		19323B3E2E784952008BEB76 /* JoyStick.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoyStick.swift; sourceTree = "<group>"; };
+		1978272A2E86D01A00E30963 /* LoginViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoginViewController.swift; sourceTree = "<group>"; };
+		1978272C2E86D0C400E30963 /* CooldownTimerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CooldownTimerNode.swift; sourceTree = "<group>"; };
+		1978272D2E86D0C500E30963 /* background.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = background.mp3; sourceTree = "<group>"; };
+		1978272E2E86D0C500E30963 /* death_sound.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = death_sound.mp3; sourceTree = "<group>"; };
+		1978272F2E86D0C500E30963 /* eat_sound.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = eat_sound.mp3; sourceTree = "<group>"; };
 		19B04E2C2E76B01700BE2BFC /* skLearning.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = skLearning.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		19B04E2F2E76B01700BE2BFC /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		19B04E352E76B01700BE2BFC /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
@@ -62,11 +72,16 @@
 			isa = PBXGroup;
 			children = (
 				19B04E2F2E76B01700BE2BFC /* AppDelegate.swift */,
+				19B04E372E76B01700BE2BFC /* GameViewController.swift */,
+				1978272A2E86D01A00E30963 /* LoginViewController.swift */,
 				19B04E352E76B01700BE2BFC /* GameScene.swift */,
 				19D15FB22E7855F500DBDD88 /* GameSocketManager.swift */,
-				19B04E372E76B01700BE2BFC /* GameViewController.swift */,
 				19323B3E2E784952008BEB76 /* JoyStick.swift */,
+				1978272C2E86D0C400E30963 /* CooldownTimerNode.swift */,
 				1919D64A2E802F5D001F5F95 /* ColoredSpriteNode.swift */,
+				1978272D2E86D0C500E30963 /* background.mp3 */,
+				1978272E2E86D0C500E30963 /* death_sound.mp3 */,
+				1978272F2E86D0C500E30963 /* eat_sound.mp3 */,
 				19B04E392E76B01700BE2BFC /* Main.storyboard */,
 				19B04E3C2E76B01900BE2BFC /* Assets.xcassets */,
 				19B04E3E2E76B01900BE2BFC /* LaunchScreen.storyboard */,
@@ -132,9 +147,12 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				197827312E86D0C500E30963 /* background.mp3 in Resources */,
 				19B04E3B2E76B01700BE2BFC /* Main.storyboard in Resources */,
 				19B04E3D2E76B01900BE2BFC /* Assets.xcassets in Resources */,
+				197827332E86D0C500E30963 /* eat_sound.mp3 in Resources */,
 				19B04E402E76B01900BE2BFC /* LaunchScreen.storyboard in Resources */,
+				197827322E86D0C500E30963 /* death_sound.mp3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -145,11 +163,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1978272B2E86D01A00E30963 /* LoginViewController.swift in Sources */,
 				19B04E362E76B01700BE2BFC /* GameScene.swift in Sources */,
 				19323B3F2E784952008BEB76 /* JoyStick.swift in Sources */,
 				19D15FB32E7855F500DBDD88 /* GameSocketManager.swift in Sources */,
 				19B04E382E76B01700BE2BFC /* GameViewController.swift in Sources */,
 				19B04E302E76B01700BE2BFC /* AppDelegate.swift in Sources */,
+				197827302E86D0C500E30963 /* CooldownTimerNode.swift in Sources */,
 				1919D64B2E802F5D001F5F95 /* ColoredSpriteNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

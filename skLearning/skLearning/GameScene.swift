@@ -235,10 +235,20 @@ class GameScene: SKScene {
                 return
             }
         }
-        currentCircle?.isHidden = false
-        currentLine?.isHidden = false
-        // 蛇头朝向触摸点
-        towards(to: location)
+        if connected, currentLine == nil, currentCircle == nil{
+            // 创建新的圆圈
+            currentCircle = createCircle(at: location)
+            currentCircle.map { addChild($0) }
+            
+            // 创建新的直线
+            currentLine = createLine(from: startPoint, to: location)
+            currentLine.map { addChild($0) }
+        } else {
+            currentCircle?.isHidden = false
+            currentLine?.isHidden = false
+            // 蛇头朝向触摸点
+            towards(to: location)
+        }
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -838,13 +848,6 @@ extension GameScene: GameSocketManagerDelegate {
         statusLabel.text = "已连接"
         statusLabel.fontColor = .green
         connected = true
-        // 创建新的圆圈
-        currentCircle = createCircle(at: location)
-        currentCircle.map { addChild($0) }
-        
-        // 创建新的直线
-        currentLine = createLine(from: startPoint, to: location)
-        currentLine.map { addChild($0) }
     }
     
     func didDisconnectFromServer() {
