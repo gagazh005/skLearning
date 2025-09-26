@@ -217,7 +217,10 @@ class GameScene: SKScene {
             activeTouches.append(touch)
         }
         if activeTouches.count >= 2 {
+            currentCircle?.isHidden = true
+            currentLine?.isHidden = true
             startMultiTouchGesture()
+            return
         }
         guard let touch = touches.first, let startPoint = startPoint else { return }
         let location = touch.location(in: self)
@@ -242,6 +245,7 @@ class GameScene: SKScene {
         super.touchesMoved(touches, with: event)
         if activeTouches.count == 2 {
             handleMultiTouchGesture()
+            return
         }
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
