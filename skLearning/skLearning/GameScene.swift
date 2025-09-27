@@ -20,6 +20,8 @@ class GameScene: SKScene {
     private let serverHost = "192.168.1.17"
     private let serverPort: Int32 = 5555
     private var connected = false
+    var serverIP: String?
+    var username: String?
     
     // 服务器定义的边界（根据Python服务器数据调整）
     var serverBounds = CGRect(x: 0, y: 0, width: 40, height: 30) 
@@ -566,17 +568,18 @@ class GameScene: SKScene {
     }
     
     func connectToServer() {
-        statusLabel.text = "连接中..."
+        statusLabel.text = "连接\(serverIP ?? serverHost)中..."
         statusLabel.fontColor = .yellow
-        socketManager.connectToServer(host: serverHost, port: serverPort)
+        socketManager.connectToServer(host: serverIP ?? serverHost, port: serverPort)
     }
     
     func sendUsernameToServer() {
         let usernameData: [String: Any] = [
             "type": "username",
-            "username": "gagazh"
+            "username": username ?? "gagazh"
         ]
         socketManager.sendData(usernameData)
+        print("设定用户名为\(username ?? "gagazh")")
     }
     
     // MARK: - 处理UI布局

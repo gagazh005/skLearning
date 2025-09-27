@@ -11,6 +11,8 @@ class LoginViewController: UIViewController {
     
     // 登录成功回调
     var onLoginSuccess: (() -> Void)?
+    var serverIP: String?
+    var username: String?
     
     // UI 组件
     private var serverIPTextField: UITextField!
@@ -165,10 +167,7 @@ class LoginViewController: UIViewController {
         loginButton.isEnabled = false
         loginButton.setTitle("登录中...", for: .normal)
         
-        // 模拟登录过程
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.handleLoginSuccess(serverIP: serverIP, username: username)
-        }
+        handleLogin(serverIP: serverIP, username: username)
     }
     
     @objc private func exitTapped() {
@@ -179,12 +178,15 @@ class LoginViewController: UIViewController {
         view.endEditing(true)
     }
     
-    private func handleLoginSuccess(serverIP: String, username: String) {
-        print("登录成功 - 服务器: \(serverIP), 用户名: \(username)")
+    private func handleLogin(serverIP: String, username: String) {
+        print("登录中 - 服务器: \(serverIP), 用户名: \(username)")
         
         // 保存登录信息
         UserDefaults.standard.set(serverIP, forKey: "lastServerIP")
         UserDefaults.standard.set(username, forKey: "lastUsername")
+        
+        self.serverIP = serverIP
+        self.username = username
         
         // 执行回调
         onLoginSuccess?()

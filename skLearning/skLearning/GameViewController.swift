@@ -13,6 +13,10 @@ class GameViewController: UIViewController {
     
     private var pinchGesture: UIPinchGestureRecognizer!
     private var skView: SKView!
+    
+    // 添加属性存储登录信息
+    var serverIP: String?
+    var username: String?
 
     override func loadView() {
         // 手动创建 SKView 作为主视图
@@ -24,20 +28,25 @@ class GameViewController: UIViewController {
         super.viewDidLoad()
         
         print("GameViewController 加载完成")
+        print("接收到的登录信息 - 服务器: \(serverIP ?? "未设置"), 用户名: \(username ?? "未设置")")
         
         let screen = UIScreen.main
         let screenSize = screen.bounds.size
         let scale = screen.scale
         let resolution = CGSize(width: screenSize.width * scale, height: screenSize.height * scale)
         
-        print("屏幕尺寸（点）：\(screenSize.width) x \(screenSize.height)")
-        print("屏幕缩放比例：\(scale)")
-        print("屏幕分辨率（像素）：\(resolution.width) x \(resolution.height)")
+        //print("屏幕尺寸（点）：\(screenSize.width) x \(screenSize.height)")
+        //print("屏幕缩放比例：\(scale)")
+        //print("屏幕分辨率（像素）：\(resolution.width) x \(resolution.height)")
         
         // 现在直接使用 skView，不需要强制转换
         let scene = GameScene(size: screenSize)
+        if let ip = serverIP, let user = username {
+            scene.serverIP = ip
+            scene.username = user
+            print("已向 GameScene 传递参数: IP=\(ip), User=\(user)")
+        }
         scene.scaleMode = .resizeFill
-        
         skView.presentScene(scene)
         skView.ignoresSiblingOrder = true
         skView.showsFPS = true
