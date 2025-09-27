@@ -689,9 +689,8 @@ class GameScene: SKScene {
         let screenPosition = serverToScreenPosition(CGPoint(x: headX, y: headY + 1))
         if let idLabel = player.childNode(withName: "玩家\(id)的标签") as? SKLabelNode {
             // 更新玩家ID标签
-            if idLabel.text == "玩家\(id)" {
-                idLabel.text = myPlayerId == id ? "我" : name
-            }
+            idLabel.text = myPlayerId == id ? "我" : name
+            idLabel.alpha = myPlayerId == id ? 1.0 : playerAlpha
             let moveAction = SKAction.move(to: screenPosition, duration: updateInterval)
             idLabel.run(moveAction)
         }
