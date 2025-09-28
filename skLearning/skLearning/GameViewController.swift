@@ -13,6 +13,7 @@ class GameViewController: UIViewController {
     
     private var pinchGesture: UIPinchGestureRecognizer!
     private var skView: SKView!
+    private var scene: GameScene!
     
     // 添加属性存储登录信息
     var serverIP: String?
@@ -40,7 +41,7 @@ class GameViewController: UIViewController {
         //print("屏幕分辨率（像素）：\(resolution.width) x \(resolution.height)")
         
         // 现在直接使用 skView，不需要强制转换
-        let scene = GameScene(size: screenSize)
+        scene = GameScene(size: screenSize)
         if let ip = serverIP, let user = username {
             scene.serverIP = ip
             scene.username = user
@@ -55,6 +56,8 @@ class GameViewController: UIViewController {
         
         // 添加捏合手势识别器
         setupPinchGesture()
+        setupRotationGesture()
+        setupSwipeUpGesture()
         
         // 添加提示标签（可选，可以在一段时间后隐藏）
         showHintLabel()
@@ -67,9 +70,50 @@ class GameViewController: UIViewController {
     
     private func setupPinchGesture() {
         pinchGesture = UIPinchGestureRecognizer(target: self, action: #selector(handlePinchGesture(_:)))
+        pinchGesture.delegate = self
         view.addGestureRecognizer(pinchGesture)
-        
         print("捏合手势已添加")
+    }
+
+    private func setupRotationGesture() {
+        rotationGesture = UIRotationGestureRecognizer(target: self, action: #selector(handleRotationGesture(_:)))
+        rotationGesture.delegate = self
+        view.addGestureRecognizer(rotationGesture)
+        print("旋转手势已添加")
+    }
+    
+    private func setupSwipeUpGesture() {
+        swipeUpGesture = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeUpGesture(_:)))
+        swipeUpGesture.direction = .up
+        swipeUpGesture.numberOfTouchesRequired = 3 // 三指上推
+        swipeUpGesture.delegate = self
+        view.addGestureRecognizer(swipeUpGesture)
+        print("三指上推手势已添加")
+    }
+
+    @objc private func handleRotationGesture(_ gesture: UIRotationGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            print("旋转手势开始，旋转角度: \(gesture.rotation)")
+            
+        case .changed:
+            let rotation = gesture.rotation
+            let degrees = rotation * 180 / .pi
+            print("旋转中: \(String(format: "%.1f", degrees))°")
+            
+        case .ended, .cancelled:
+            handleRotationGestureEnded(gesture)
+            
+        default:
+            break
+        }
+    }
+    
+    @objc private func handleSwipeUpGesture(_ gesture: UISwipeGestureRecognizer) {
+        guard gesture.state == .ended else { return }
+        
+        print("三指上推手势触发")
+        handleThreeFingerSwipeUp()
     }
     
     @objc private func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
@@ -91,6 +135,7 @@ class GameViewController: UIViewController {
         }
     }
     
+    // MARK: - 手势结束处理
     private func checkPinchForReturn(_ gesture: UIPinchGestureRecognizer) {
         let scale = gesture.scale
         let velocity = gesture.velocity
@@ -123,10 +168,55 @@ class GameViewController: UIViewController {
         present(alert, animated: true)
     }
     
+    private func returnToLogin() {
+        print("返回登录界面")
+        
+        // 清除登录信息
+        UserDefaults.standard.removeObject(forKey: "lastServerIP")
+        UserDefaults.standard.removeObject(forKey: "lastUsername")
+        
+        // 通过 AppDelegate 切换回登录界面
+        if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+            appDelegate.showLoginViewController()
+        } else {
+            // 备用方案：如果 AppDelegate 方法不可用，使用 dismiss
+            dismiss(animated: true) {
+                print("已返回到登录界面")
+            }
+        }
+    }
+
+    private func handleRotationGestureEnded(_ gesture: UIRotationGestureRecognizer) {
+        let rotation = gesture.rotation
+        let velocity = gesture.velocity
+        let degrees = rotation * 180 / .pi
+        
+        print("旋转手势结束: 角度=\(String(format: "%.1f", degrees))°, 速度=\(velocity)")
+        
+        // 根据旋转角度和速度执行不同操作
+        if abs(degrees) > 30 && abs(velocity) > 1.0 {
+            // 快速旋转超过30度
+            if degrees > 0 {
+                showGestureAlert("顺时针快速旋转", message: "重生？")
+                scene.processReborn
+            } else {
+                showGestureAlert("逆时针快速旋转", message: "执行空白动作A")
+            }
+        } else if abs(degrees) > 180 {
+            showGestureAlert("旋转一圈", message: "执行空白动作B")
+        }
+    }
+
+    private func handleThreeFingerSwipeUp() {
+        // 三指上推的功能
+        showGestureAlert("三指上推", message: "暂停游戏？")
+        scene.processPauseGame
+    }
+
     private func showHintLabel() {
         // 添加一个临时提示标签，3秒后自动隐藏
         let hintLabel = UILabel()
-        hintLabel.text = "双指捏合可返回登录界面"
+        hintLabel.text = "双指捏合可返回登录界面，三指上推暂停游戏，顺时针快速旋转重生"
         hintLabel.textColor = .white
         hintLabel.backgroundColor = UIColor.black.withAlphaComponent(0.7)
         hintLabel.textAlignment = .center
@@ -150,24 +240,6 @@ class GameViewController: UIViewController {
                 hintLabel.alpha = 0
             }) { _ in
                 hintLabel.removeFromSuperview()
-            }
-        }
-    }
-    
-    private func returnToLogin() {
-        print("返回登录界面")
-        
-        // 清除登录信息
-        UserDefaults.standard.removeObject(forKey: "lastServerIP")
-        UserDefaults.standard.removeObject(forKey: "lastUsername")
-        
-        // 通过 AppDelegate 切换回登录界面
-        if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
-            appDelegate.showLoginViewController()
-        } else {
-            // 备用方案：如果 AppDelegate 方法不可用，使用 dismiss
-            dismiss(animated: true) {
-                print("已返回到登录界面")
             }
         }
     }

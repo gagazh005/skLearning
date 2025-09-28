@@ -4,10 +4,6 @@ import AVFoundation
 
 class GameScene: SKScene {
     // MARK: - 触控相关属性
-    private var activeTouches: [UITouch] = []
-    private var previousAngle: CGFloat = 0
-    private var previousDistance: CGFloat = 0
-    var gestureNode: SKNode = SKNode()
     private let rotationThreshold: CGFloat = 30 / 180 * .pi
     private let scaleThreshold: CGFloat = 0.5
     private var currentLine: SKShapeNode?  // 当前绘制的直线
@@ -214,16 +210,6 @@ class GameScene: SKScene {
     
     // MARK: - 捕捉摇杆和触屏输入信号
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        super.touchesBegan(touches, with: event)
-        for touch in touches {
-            activeTouches.append(touch)
-        }
-        if activeTouches.count >= 2 {
-            currentCircle?.isHidden = true
-            currentLine?.isHidden = true
-            startMultiTouchGesture()
-            return
-        }
         guard let touch = touches.first, let startPoint = startPoint else { return }
         let location = touch.location(in: self)
         let nodes = self.nodes(at: location)
@@ -256,11 +242,6 @@ class GameScene: SKScene {
     }
     
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        super.touchesMoved(touches, with: event)
-        if activeTouches.count == 2 {
-            handleMultiTouchGesture()
-            return
-        }
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
         
@@ -272,91 +253,13 @@ class GameScene: SKScene {
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        super.touchesEnded(touches, with: event)
-        for touch in touches {
-            if let index = activeTouches.firstIndex(of: touch) {
-                activeTouches.remove(at: index)
-            }
-        }
-        if activeTouches.count < 2 {
-            endMultiTouchGesture()
-        }
         currentCircle?.isHidden = true
         currentLine?.isHidden = true
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        super.touchesEnded(touches, with: event)
-        for touch in touches {
-            if let index = activeTouches.firstIndex(of: touch) {
-                activeTouches.remove(at: index)
-            }
-        }
-        if activeTouches.count < 2 {
-            endMultiTouchGesture()
-        }
         currentCircle?.isHidden = true
         currentLine?.isHidden = true
-    }
-
-    // MARK： - 多点触控方法
-    private func startMultiTouchGesture() {
-        guard activeTouches.count >= 2 else { return }
-        
-        let touch1 = activeTouches[0]
-        let touch2 = activeTouches[1]
-        
-        let loc1 = touch1.location(in: self)
-        let loc2 = touch2.location(in: self)
-        
-        previousAngle = angleBetween(loc1, loc2)
-        previousDistance = distanceBetween(loc1, loc2)
-    }
-    
-    private func handleMultiTouchGesture() {
-        guard activeTouches.count == 2 else { return }
-        
-        let touch1 = activeTouches[0]
-        let touch2 = activeTouches[1]
-        
-        let loc1 = touch1.location(in: self)
-        let loc2 = touch2.location(in: self)
-        
-        // 处理旋转
-        let currentAngle = angleBetween(loc1, loc2)
-        let angleDelta = currentAngle - previousAngle
-        gestureNode.zRotation += angleDelta
-        previousAngle = currentAngle
-        
-        // 处理缩放
-        let currentDistance = distanceBetween(loc1, loc2)
-        let scaleDelta = currentDistance / previousDistance
-        gestureNode.xScale *= scaleDelta
-        gestureNode.yScale *= scaleDelta
-        previousDistance = currentDistance
-        if gestureNode.zRotation > rotationThreshold {
-            processRotation()
-        } else if gestureNode.yScale < scaleThreshold {
-            processYScale()
-        } else if gestureNode.xScale < scaleThreshold {
-            processXScale()
-        }
-    }
-    
-    private func endMultiTouchGesture() {
-        gestureNode.zRotation = 0
-        gestureNode.xScale = 1.0
-        gestureNode.yScale = 1.0
-    }
-    
-    private func angleBetween(_ point1: CGPoint, _ point2: CGPoint) -> CGFloat {
-        return atan2(point2.y - point1.y, point2.x - point1.x)
-    }
-    
-    private func distanceBetween(_ point1: CGPoint, _ point2: CGPoint) -> CGFloat {
-        let dx = point2.x - point1.x
-        let dy = point2.y - point1.y
-        return sqrt(dx*dx + dy*dy)
     }
 
     func processConnect() {
@@ -371,15 +274,15 @@ class GameScene: SKScene {
         }
     }
 
-    func processRotation() {
+    func processReborn() {
         sendCommandToServer("reborn")
     }
 
-    func processYScale() {
+    func processPauseGame() {
         sendCommandToServer("pause_game")
     }
 
-    func processXScale() {
+    func processQuitGame() {
         sendCommandToServer("quit_game")
     }
 
