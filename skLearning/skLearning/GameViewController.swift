@@ -12,6 +12,8 @@ import GameplayKit
 class GameViewController: UIViewController {
     
     private var pinchGesture: UIPinchGestureRecognizer!
+    private var rotationGesture: UIRotationGestureRecognizer!
+    private var swipeUpGesture: UISwipeGestureRecognizer!
     private var skView: SKView!
     private var scene: GameScene!
     
