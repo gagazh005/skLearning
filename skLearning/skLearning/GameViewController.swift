@@ -213,6 +213,50 @@ class GameViewController: UIViewController {
         scene.processPauseGame
     }
 
+    private func showGestureAlert(_ title: String, message: String) {
+        // 简单的提示，不打断游戏
+        print("手势动作: \(title) - \(message)")
+        
+        // 可以在游戏界面上显示一个临时提示
+        showTemporaryMessage("\(title): \(message)")
+    }
+    
+    private func showTemporaryMessage(_ message: String) {
+        let messageLabel = UILabel()
+        messageLabel.text = message
+        messageLabel.textColor = .white
+        messageLabel.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        messageLabel.textAlignment = .center
+        messageLabel.font = UIFont.systemFont(ofSize: 16)
+        messageLabel.layer.cornerRadius = 8
+        messageLabel.clipsToBounds = true
+        messageLabel.alpha = 0
+        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(messageLabel)
+        
+        NSLayoutConstraint.activate([
+            messageLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            messageLabel.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            messageLabel.heightAnchor.constraint(equalToConstant: 40),
+            messageLabel.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, constant: -40)
+        ])
+        
+        // 显示动画
+        UIView.animate(withDuration: 0.3) {
+            messageLabel.alpha = 1
+        }
+        
+        // 2秒后自动隐藏
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            UIView.animate(withDuration: 0.3, animations: {
+                messageLabel.alpha = 0
+            }) { _ in
+                messageLabel.removeFromSuperview()
+            }
+        }
+    } 
+
     private func showHintLabel() {
         // 添加一个临时提示标签，3秒后自动隐藏
         let hintLabel = UILabel()
