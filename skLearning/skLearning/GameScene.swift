@@ -285,6 +285,10 @@ class GameScene: SKScene {
         sendCommandToServer("quit_game")
     }
 
+    func processChangeColor() {
+        sendCommandToServer("change_color")
+    }
+
     // MARK: - 摇杆方法
     
     private func setupJoyStick() {

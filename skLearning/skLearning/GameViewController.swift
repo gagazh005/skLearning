@@ -197,10 +197,11 @@ class GameViewController: UIViewController {
         if abs(degrees) > 30 && abs(velocity) > 1.0 {
             // 快速旋转超过30度
             if degrees > 0 {
-                showGestureAlert("顺时针快速旋转", message: "重生？")
-                scene.processReborn
+                showGestureAlert("顺时针快速旋转", message: "重生")
+                scene.processReborn()
             } else {
-                showGestureAlert("逆时针快速旋转", message: "执行空白动作A")
+                showGestureAlert("逆时针快速旋转", message: "换颜色")
+                scene.processChangeColor()
             }
         } else if abs(degrees) > 180 {
             showGestureAlert("旋转一圈", message: "执行空白动作B")
@@ -209,8 +210,8 @@ class GameViewController: UIViewController {
 
     private func handleThreeFingerSwipeUp() {
         // 三指上推的功能
-        showGestureAlert("三指上推", message: "暂停游戏？")
-        scene.processPauseGame
+        showGestureAlert("三指上推", message: "暂停/恢复游戏")
+        scene.processPauseGame()
     }
 
     private func showGestureAlert(_ title: String, message: String) {
