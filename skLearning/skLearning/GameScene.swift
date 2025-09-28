@@ -16,8 +16,6 @@ class GameScene: SKScene {
     private let serverHost = "192.168.1.17"
     private let serverPort: Int32 = 5555
     private var connected = false
-    var serverIP: String?
-    var username: String?
     
     // 服务器定义的边界（根据Python服务器数据调整）
     var serverBounds = CGRect(x: 0, y: 0, width: 40, height: 30) 
@@ -82,6 +80,7 @@ class GameScene: SKScene {
             foodTextures.append(texture)
         }
         setupAudio()
+        processConnect()
     }
 
     func setupAudio() {
@@ -471,12 +470,14 @@ class GameScene: SKScene {
     }
     
     func connectToServer() {
+        let serverIP = UserDefaults.standard.string(forKey: "lastServerIP")
         statusLabel.text = "连接\(serverIP ?? serverHost)中..."
         statusLabel.fontColor = .yellow
         socketManager.connectToServer(host: serverIP ?? serverHost, port: serverPort)
     }
     
     func sendUsernameToServer() {
+        let username = UserDefaults.standard.string(forKey: "lastUsername")
         let usernameData: [String: Any] = [
             "type": "username",
             "username": username ?? "gagazh"

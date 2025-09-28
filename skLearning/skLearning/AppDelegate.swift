@@ -52,7 +52,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // 设置登录成功回调
         loginVC.onLoginSuccess = { [weak self] in
-            self?.showGameViewController(with: loginVC.serverIP ?? "localhost", username: loginVC.username ?? "gagazh")
+            self?.showGameViewController()
         }
         
         // 切换根视图控制器
@@ -60,11 +60,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         print("切换到登录界面")
     }
     
-    func showGameViewController(with serverIP: String = "localhost", username: String = "gagazh") {
-        let gameVC = GameViewController()
-        gameVC.serverIP = serverIP
-        gameVC.username = username
-        
+    func showGameViewController() {
         switchRootViewController(to: gameVC, animated: true)
         print("切换到游戏界面，参数: IP=\(serverIP), User=\(username)")
     }

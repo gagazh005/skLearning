@@ -16,10 +16,6 @@ class GameViewController: UIViewController {
     private var swipeUpGesture: UISwipeGestureRecognizer!
     private var skView: SKView!
     private var scene: GameScene!
-    
-    // 添加属性存储登录信息
-    var serverIP: String?
-    var username: String?
 
     override func loadView() {
         // 手动创建 SKView 作为主视图
@@ -176,6 +172,8 @@ class GameViewController: UIViewController {
         // 清除登录信息
         UserDefaults.standard.removeObject(forKey: "lastServerIP")
         UserDefaults.standard.removeObject(forKey: "lastUsername")
+
+        scene.processQuitGame()
         
         // 通过 AppDelegate 切换回登录界面
         if let appDelegate = UIApplication.shared.delegate as? AppDelegate {

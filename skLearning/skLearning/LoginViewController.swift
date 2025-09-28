@@ -185,9 +185,6 @@ class LoginViewController: UIViewController {
         UserDefaults.standard.set(serverIP, forKey: "lastServerIP")
         UserDefaults.standard.set(username, forKey: "lastUsername")
         
-        self.serverIP = serverIP
-        self.username = username
-        
         // 执行回调
         onLoginSuccess?()
     }
