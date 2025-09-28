@@ -61,8 +61,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
     
     func showGameViewController() {
+        let gameVC = GameViewController()
         switchRootViewController(to: gameVC, animated: true)
-        print("切换到游戏界面，参数: IP=\(serverIP), User=\(username)")
+        print("切换到游戏界面")
     }
     
     private func switchRootViewController(to newViewController: UIViewController, animated: Bool = true) {

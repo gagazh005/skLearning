@@ -27,8 +27,6 @@ class GameViewController: UIViewController {
         super.viewDidLoad()
         
         print("GameViewController 加载完成")
-        print("接收到的登录信息 - 服务器: \(serverIP ?? "未设置"), 用户名: \(username ?? "未设置")")
-        
         let screen = UIScreen.main
         let screenSize = screen.bounds.size
         let scale = screen.scale
@@ -39,12 +37,8 @@ class GameViewController: UIViewController {
         //print("屏幕分辨率（像素）：\(resolution.width) x \(resolution.height)")
         
         // 现在直接使用 skView，不需要强制转换
-        scene = GameScene(size: screenSize)
-        if let ip = serverIP, let user = username {
-            scene.serverIP = ip
-            scene.username = user
-            print("已向 GameScene 传递参数: IP=\(ip), User=\(user)")
-        }
+        let scene = GameScene(size: screenSize)
+        self.scene = scene
         scene.scaleMode = .resizeFill
         skView.presentScene(scene)
         skView.ignoresSiblingOrder = true
