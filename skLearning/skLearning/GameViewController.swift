@@ -37,8 +37,7 @@ class GameViewController: UIViewController {
         //print("屏幕分辨率（像素）：\(resolution.width) x \(resolution.height)")
         
         // 现在直接使用 skView，不需要强制转换
-        let scene = GameScene(size: screenSize)
-        self.scene = scene
+        scene = GameScene(size: screenSize)
         scene.scaleMode = .resizeFill
         skView.presentScene(scene)
         skView.ignoresSiblingOrder = true
