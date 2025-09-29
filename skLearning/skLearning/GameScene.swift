@@ -623,6 +623,7 @@ class GameScene: SKScene {
                 }
                 // 重用蛇身节点
                 guard let snakeBodyNode = player.childNode(withName: "蛇身节点\(index)") as? ColoredSpriteNode else { return }
+                snakeBodyNode.setColorFromServer(color: color)
                 let ratio = snakeArray.count > 1 ? pow(Double(headRatio), 1 - Double(index) / Double(snakeArray.count - 1)) : headRatio
                 let scaleAction = SKAction.scale(to: CGSize(width: ratio * playerSize, height: ratio * playerSize), duration: 1)
                 let moveAction = SKAction.move(to: screenPosition, duration: updateInterval)
