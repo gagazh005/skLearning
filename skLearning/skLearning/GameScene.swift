@@ -714,8 +714,7 @@ class GameScene: SKScene {
     // MARK: 排行榜管理
     func updateRanking(playersData: [String : Any]) {
         let onlinePlayersId = playersData.keys
-        ranking.children.forEach { $0.isHidden = true }
-        ranking.children.filter { onlinePlayersId.contains($0.name ?? "错误") }.forEach { $0.isHidden = false}
+        ranking.children.forEach { $0.isHidden = !onlinePlayersId.contains($0.name ?? "") }
         for (id, playerData) in playersData {
             guard let playerData = playerData as? [String: Any] else { return }
             guard let playerRanking = playerData["ranking"] as? Int,
@@ -730,12 +729,18 @@ class GameScene: SKScene {
             liveTime = round(liveTime * 10) / 10
             let prefix = id == myPlayerId ? "->" : ""
             let text = "\(prefix)\(id)：\(name)(HP=\(hp))\(score)分 - \(status) \(liveTime)秒"
+            let targetPosition = CGPoint(x: 20, y: frame.height - 20 * CGFloat(playerRanking + 1))
             if let rankLabel = ranking.childNode(withName: id) as? SKLabelNode {
-                rankLabel.text = text
-                let moveAction = SKAction.move(to: CGPoint(x: 20, y: frame.height - 20 * CGFloat(playerRanking + 1)), duration: 1)
-                rankLabel.run(moveAction)
+                if rankLabel.text != text {
+                    rankLabel.text = text
+                }
+                if rankLabel.position != targetPosition {
+                    let moveAction = SKAction.move(to: targetPosition, duration: 1)
+                    rankLabel.run(moveAction)
+                }     
             } else {
                 let rankLabel = SKLabelNode()
+                rankLabel.position = targetPosition
                 rankLabel.fontColor = color
                 rankLabel.fontName = "PingFangSC-Semibold"
                 rankLabel.fontSize = 15
