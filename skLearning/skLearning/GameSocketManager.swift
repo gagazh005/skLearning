@@ -126,12 +126,11 @@ class GameSocketManager {
         if expectedDataLength > 0 {
             isReadingHeader = false
             receivedDataBuffer = Data()
-            receiveData() // 开始接收数据体
         } else {
             print("无效的数据长度: \(expectedDataLength)")
             resetReceiveState()
-            receiveData() // 继续接收下一个长度头
         }
+        receiveData() 
     }
     
     private func handleBodyData(_ data: Data?, isComplete: Bool, error: Error?) {
@@ -159,17 +158,16 @@ class GameSocketManager {
         
         if receivedDataBuffer.count >= expectedDataLength {
             // 收到完整的数据包
-            processCompleteData(receivedDataBuffer)
+            let completeData = receivedDataBuffer.prefix(expectedDataLength)
+            processCompleteData(Data(completeData))
+            // 处理可能的多余数据（粘包情况）
+            if receivedDataBuffer.count > expectedDataLength {
+                let remainingData = receivedDataBuffer.suffix(from: expectedDataLength)
+                print("警告：收到多余数据，可能粘包，长度: \(remainingData.count)")
+            }
             resetReceiveState()
         }
-        
-        // 继续接收剩余数据（如果有）
-        if receivedDataBuffer.count < expectedDataLength {
-            receiveData()
-        } else {
-            resetReceiveState()
-            receiveData() // 开始接收下一个数据包
-        }
+        receiveData()
     }
     
     private func processCompleteData(_ data: Data) {
