@@ -173,7 +173,9 @@ class GameSocketManager {
     private func processCompleteData(_ data: Data) {
         do {
             if let jsonObject = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                self.delegate?.didReceiveData(jsonObject)
+                DispatchQueue.main.async {
+                    self.delegate?.didReceiveData(jsonObject)
+                }
             } else {
                 print("解析的数据不是字典格式")
             }
