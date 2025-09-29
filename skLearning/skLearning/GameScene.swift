@@ -626,7 +626,9 @@ class GameScene: SKScene {
                 snakeBodyNode.setColorFromServer(color: color)
                 let ratio = snakeArray.count > 1 ? pow(Double(headRatio), 1 - Double(index) / Double(snakeArray.count - 1)) : headRatio
                 let scaleAction = SKAction.scale(to: CGSize(width: ratio * playerSize, height: ratio * playerSize), duration: 1)
-                let moveAction = SKAction.move(to: screenPosition, duration: updateInterval)
+                let distance = snakeBodyNode.position.distance(to: screenPosition)
+                let duration = distance > playerSize ? 0 : updateInterval
+                let moveAction = SKAction.move(to: screenPosition, duration: duration)
                 let groupAction = SKAction.group([moveAction, scaleAction])
                 snakeBodyNode.run(groupAction)
                 if index == 0 {
@@ -790,5 +792,12 @@ extension GameScene: GameSocketManagerDelegate {
         default:
             print("未知消息类型: \(type)")
         }
+    }
+}
+
+// MARK: - 几何方法扩展
+extension CGPoint {
+    func distance(to point: CGPoint) -> CGFloat {
+        return sqrt(pow(x - point.x, 2) + pow(y - point.y, 2))
     }
 }
