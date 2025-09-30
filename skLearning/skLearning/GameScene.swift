@@ -267,7 +267,7 @@ class GameScene: SKScene {
             guard let label = connectButton.childNode(withName: "connectButtonLabel") as? SKLabelNode else { return }
             label.text = "断开连接"
         } else {
-            sendCommandToServer("quit_game")
+            processQuitGame()
             guard let label = connectButton.childNode(withName: "connectButtonLabel") as? SKLabelNode else { return }
             label.text = "连接"
         }
@@ -283,6 +283,8 @@ class GameScene: SKScene {
 
     func processQuitGame() {
         sendCommandToServer("quit_game")
+        print("quit_game by player")
+        backgroundMusic?.stop()
     }
 
     func processChangeColor() {
@@ -356,7 +358,15 @@ class GameScene: SKScene {
             message = "重生成功"
             backgroundMusic?.play()
         case "pause_game":
-            guard let (gamePaused, playerId, name, pauseCount) = content as? (Bool, String, String, Int) else { return }
+            guard let content = content as? [Any] else { return }
+            guard content.count == 4,
+            let gamePaused = content[0] as? Bool,
+            let playerId = content[1] as? Int,
+            let name = content[2] as? String,
+            let pauseCount = content[3] as? Int else {
+                print("数组元素类型或数量不匹配")
+                return
+            }
             self.gamePaused = gamePaused
             if gamePaused {
                 message = "玩家\(playerId):\(name)暂停游戏,还剩\(pauseCount)次"
