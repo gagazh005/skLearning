@@ -635,10 +635,10 @@ class GameScene: SKScene {
                 guard let snakeBodyNode = player.childNode(withName: "蛇身节点\(index)") as? ColoredSpriteNode else { return }
                 snakeBodyNode.setColorFromServer(color: color)
                 let ratio = snakeArray.count > 1 ? pow(Double(headRatio), 1 - Double(index) / Double(snakeArray.count - 1)) : headRatio
-                let scaleAction = SKAction.scale(to: CGSize(width: ratio * playerSize, height: ratio * playerSize), duration: 1)
+                let scaleAction = SKAction.scale(to: CGSize(width: ratio * playerSize, height: ratio * playerSize), duration: 0)
                 let distance = snakeBodyNode.position.distance(to: screenPosition)
-                let duration = distance > playerSize ? 0 : updateInterval
-                let moveAction = SKAction.move(to: screenPosition, duration: duration)
+                //let duration = distance > playerSize ? 0 : updateInterval
+                let moveAction = SKAction.move(to: screenPosition, duration: 0)
                 let groupAction = SKAction.group([moveAction, scaleAction])
                 snakeBodyNode.run(groupAction)
                 if index == 0 {
