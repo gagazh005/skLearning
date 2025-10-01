@@ -635,19 +635,23 @@ class GameScene: SKScene {
                 guard let snakeBodyNode = player.childNode(withName: "蛇身节点\(index)") as? ColoredSpriteNode else { return }
                 snakeBodyNode.setColorFromServer(color: color)
                 let ratio = snakeArray.count > 1 ? pow(Double(headRatio), 1 - Double(index) / Double(snakeArray.count - 1)) : headRatio
+                snakeBodyNode.size = CGSize(width: ratio * playerSize, height: ratio * playerSize)
+                snakeBodyNode.position = screenPosition
+                /*
                 let scaleAction = SKAction.scale(to: CGSize(width: ratio * playerSize, height: ratio * playerSize), duration: 0)
                 let distance = snakeBodyNode.position.distance(to: screenPosition)
-                //let duration = distance > playerSize ? 0 : updateInterval
-                let moveAction = SKAction.move(to: screenPosition, duration: 0)
+                let duration = distance > playerSize ? 0 : updateInterval
+                let moveAction = SKAction.move(to: screenPosition, duration: duration)
                 let groupAction = SKAction.group([moveAction, scaleAction])
                 snakeBodyNode.run(groupAction)
+                 */
                 if index == 0 {
                     // 按照服务器direction数据旋转蛇头
                     let angle = atan2(direction[1], direction[0])
                     snakeBodyNode.zRotation = angle
                     snakeBodyNode.glow(playerTimesDict: playerTimesDict)
                 }
-                snakeBodyNode.zPosition = 100 - CGFloat(index) / CGFloat(snakeArray.count)
+                //snakeBodyNode.zPosition = 100 - CGFloat(index) / CGFloat(snakeArray.count)
                 snakeBodyNode.isHidden = false
                 snakeBodyNode.alpha = playerAlpha
             } else {
@@ -657,7 +661,7 @@ class GameScene: SKScene {
                 snakeBodyNode.size = CGSize(width: playerSize, height: playerSize)
                 snakeBodyNode.position = screenPosition
                 player.addChild(snakeBodyNode)
-                snakeBodyNode.zPosition = 100 - CGFloat(index) / CGFloat(snakeArray.count)
+                //snakeBodyNode.zPosition = 100 - CGFloat(index) / CGFloat(snakeArray.count)
                 snakeBodyNode.alpha = playerAlpha
             }
         }
